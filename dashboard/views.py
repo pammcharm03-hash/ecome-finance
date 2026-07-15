@@ -1,3 +1,4 @@
+import json
 from django.db.models import Sum, Count, Q
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -93,6 +94,9 @@ def admin_dashboard(request):
         "by_fee_type": list(by_fee_type),
         "by_branch": list(by_branch),
         "by_class": list(by_class),
+        "fee_data_json": json.dumps(list(by_fee_type), ensure_ascii=False),
+        "branch_data_json": json.dumps(list(by_branch), ensure_ascii=False),
+        "class_data_json": json.dumps(list(by_class), ensure_ascii=False),
         "recent": recent,
         "branches": Branch.objects.all(),
         "total_users": User.objects.count(),
