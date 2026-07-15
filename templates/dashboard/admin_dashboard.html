@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Dashboard - {{ SCHOOL_NAME }}{% endblock %}
 {% block page_title %}Dashboard Overview{% endblock %}
 
 {% block content %}
 <div class="fade-in-up">
+
 <!-- Stat Cards -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-xl-3">
@@ -49,6 +51,53 @@
                 <div class="stat-icon bg-danger-soft"><i class="bi bi-people"></i></div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Account / Management summary tiles -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="account-tile primary">
+            <div class="tile-value">{{ total_branches }}</div>
+            <div class="tile-label"><i class="bi bi-building me-1"></i>Branches</div>
+            <i class="bi bi-building tile-icon"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="account-tile success">
+            <div class="tile-value">{{ total_users }}</div>
+            <div class="tile-label"><i class="bi bi-people me-1"></i>Users</div>
+            <i class="bi bi-people tile-icon"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="account-tile warning">
+            <div class="tile-value">{{ total_fee_types }}</div>
+            <div class="tile-label"><i class="bi bi-tag me-1"></i>Fee Types</div>
+            <i class="bi bi-tag tile-icon"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="account-tile danger">
+            <div class="tile-value">{{ total_payments }}</div>
+            <div class="tile-label"><i class="bi bi-receipt me-1"></i>Payments</div>
+            <i class="bi bi-receipt tile-icon"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Quick actions -->
+<div class="stat-card mb-4">
+    <h6 class="fw-bold mb-3"><i class="bi bi-grid-1x2 me-2"></i>Quick Actions</h6>
+    <div class="row g-2">
+        {% for link in quick_links %}
+        <div class="col-6 col-sm-4 col-lg-3">
+            <a href="{% url link.url %}" class="quick-card">
+                <div class="quick-icon"><i class="bi {{ link.icon }}"></i></div>
+                <span class="quick-label">{{ link.label }}</span>
+            </a>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
@@ -112,6 +161,7 @@
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Recent Transactions</h6>
+                <a href="{% url 'payments:payment_history' %}" class="btn btn-sm btn-outline-primary">View All</a>
             </div>
             {% if recent %}
             <div class="table-responsive">
@@ -156,12 +206,11 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% json_script by_fee_type "feeData" %}
 <script>
-const feeData = {{ by_fee_type|json_script:"feeData" }};
-{% with by_fee_type as data %}
-const feeLabels = [{% for d in data %}"{{ d.fee_type__name }}",{% endfor %}];
-const feeValues = [{% for d in data %}{{ d.total }},{% endfor %}];
-{% endwith %}
+const feeData = JSON.parse(document.getElementById('feeData').textContent || '[]');
+const feeLabels = feeData.map(d => d['fee_type__name'] || 'Unknown');
+const feeValues = feeData.map(d => d.total || 0);
 
 new Chart(document.getElementById('feeTypeChart'), {
     type: 'doughnut',
@@ -176,8 +225,8 @@ new Chart(document.getElementById('feeTypeChart'), {
 });
 
 {% if by_branch %}
-const branchLabels = [{% for d in by_branch %}"{{ d.branch__name }}",{% endfor %}];
-const branchValues = [{% for d in by_branch %}{{ d.total }},{% endfor %}];
+const branchLabels = [{% for d in by_branch %}"{{ d.branch__name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const branchValues = [{% for d in by_branch %}{{ d.total }}{% if not forloop.last %},{% endif %}{% endfor %}];
 new Chart(document.getElementById('branchChart'), {
     type: 'bar',
     data: {
@@ -188,8 +237,8 @@ new Chart(document.getElementById('branchChart'), {
 });
 {% endif %}
 
-const classLabels = [{% for d in by_class %}"{{ d.student__school_class__name|default:'N/A' }}",{% endfor %}];
-const classValues = [{% for d in by_class %}{{ d.total }},{% endfor %}];
+const classLabels = [{% for d in by_class %}"{{ d.student__school_class__name|default:'N/A' }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const classValues = [{% for d in by_class %}{{ d.total }}{% if not forloop.last %},{% endif %}{% endfor %}];
 new Chart(document.getElementById('classChart'), {
     type: 'bar',
     data: {

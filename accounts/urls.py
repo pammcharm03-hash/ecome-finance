@@ -15,4 +15,6 @@ urlpatterns = [
     path("accounts/users/", av.user_list, name="user_list"),
     path("accounts/users/new/", av.user_create, name="user_create"),
     path("accounts/users/<int:pk>/edit/", av.user_edit, name="user_edit"),
+    path("accounts/users/<int:pk>/delete/", av.user_delete, name="user_delete"),
+    path("accounts/branches/<int:pk>/delete/", av.branch_delete, name="branch_delete"),
 ]

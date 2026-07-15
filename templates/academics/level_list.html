@@ -14,7 +14,10 @@
         <tbody>
             {% for l in levels %}
             <tr><td class="fw-medium">{{ l.name }}</td><td><code>{{ l.code }}</code></td><td>{{ l.order }}</td><td>{{ l.classes.count }}</td>
-                <td class="text-end"><a href="{% url 'academics:level_edit' l.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a></td></tr>
+                <td class="text-end">
+                    <a href="{% url 'academics:level_edit' l.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'academics:level_delete' l.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                </td></tr>
             {% empty %}
             <tr><td colspan="5"><div class="empty-state"><i class="bi bi-layers"></i><p>No levels yet.</p></div></td></tr>
             {% endfor %}

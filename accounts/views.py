@@ -146,3 +146,30 @@ def user_edit(request, pk):
         messages.success(request, "User updated.")
         return redirect("accounts:user_list")
     return render(request, "accounts/user_form.html", {"user": user, "branches": branches, "title": "Edit User"})
+
+
+@login_required
+@user_passes_test(is_admin)
+def branch_delete(request, pk):
+    branch = get_object_or_404(Branch, pk=pk)
+    if request.method == "POST":
+        name = branch.name
+        branch.delete()
+        messages.success(request, f"Branch '{name}' deleted.")
+        return redirect("accounts:branch_list")
+    return render(request, "accounts/branch_confirm_delete.html", {"branch": branch})
+
+
+@login_required
+@user_passes_test(is_admin)
+def user_delete(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if user.username == "admin":
+        messages.error(request, "The default admin user cannot be deleted.")
+        return redirect("accounts:user_list")
+    if request.method == "POST":
+        uname = user.username
+        user.delete()
+        messages.success(request, f"User '{uname}' deleted.")
+        return redirect("accounts:user_list")
+    return render(request, "accounts/user_confirm_delete.html", {"object": user, "type": "user"})

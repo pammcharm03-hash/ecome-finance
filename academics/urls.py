@@ -13,4 +13,7 @@ urlpatterns = [
     path("years/", views.year_list, name="year_list"),
     path("years/new/", views.year_create, name="year_create"),
     path("years/<int:year_pk>/terms/new/", views.term_create, name="term_create"),
+    path("levels/<int:pk>/delete/", views.level_delete, name="level_delete"),
+    path("classes/<int:pk>/delete/", views.class_delete, name="class_delete"),
+    path("years/<int:pk>/delete/", views.year_delete, name="year_delete"),
 ]

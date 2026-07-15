@@ -30,6 +30,9 @@
                 </td>
                 <td class="text-end">
                     <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    {% if u.username != 'admin' %}
+                    <a href="{% url 'accounts:user_delete' u.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

@@ -140,3 +140,39 @@ def term_create(request, year_pk):
             messages.success(request, "Term created.")
         return redirect("academics:year_list")
     return render(request, "academics/term_form.html", {"year": year, "title": "Add Term"})
+
+
+@login_required
+@user_passes_test(is_admin)
+def level_delete(request, pk):
+    level = get_object_or_404(Level, pk=pk)
+    if request.method == "POST":
+        name = level.name
+        level.delete()
+        messages.success(request, f"Level '{name}' deleted.")
+        return redirect("academics:level_list")
+    return render(request, "academics/confirm_delete.html", {"object": level, "type": "Level", "cancel_url": "academics:level_list"})
+
+
+@login_required
+@user_passes_test(is_admin)
+def class_delete(request, pk):
+    school_class = get_object_or_404(SchoolClass, pk=pk)
+    if request.method == "POST":
+        name = school_class.name
+        school_class.delete()
+        messages.success(request, f"Class '{name}' deleted.")
+        return redirect("academics:class_list")
+    return render(request, "academics/confirm_delete.html", {"object": school_class, "type": "Class", "cancel_url": "academics:class_list"})
+
+
+@login_required
+@user_passes_test(is_admin)
+def year_delete(request, pk):
+    year = get_object_or_404(AcademicYear, pk=pk)
+    if request.method == "POST":
+        name = year.name
+        year.delete()
+        messages.success(request, f"Academic year '{name}' deleted.")
+        return redirect("academics:year_list")
+    return render(request, "academics/confirm_delete.html", {"object": year, "type": "Academic Year", "cancel_url": "academics:year_list"})

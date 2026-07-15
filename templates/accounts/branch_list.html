@@ -26,6 +26,7 @@
                 <td>{{ b.users.count }}</td>
                 <td class="text-end">
                     <a href="{% url 'accounts:branch_edit' b.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'accounts:branch_delete' b.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                 </td>
             </tr>
             {% empty %}

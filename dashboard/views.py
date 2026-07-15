@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
-from accounts.models import Branch
+from accounts.models import Branch, User
 from students.models import Student
 from payments.models import Payment
 from finance.models import FeeType
@@ -95,5 +95,22 @@ def admin_dashboard(request):
         "by_class": list(by_class),
         "recent": recent,
         "branches": Branch.objects.all(),
+        "total_users": User.objects.count(),
+        "total_branches": Branch.objects.count(),
+        "total_fee_types": FeeType.objects.count(),
+        "quick_links": [
+            {"label": "Branches", "url": "accounts:branch_list", "icon": "bi-building", "cls": "primary"},
+            {"label": "Users", "url": "accounts:user_list", "icon": "bi-people", "cls": "success"},
+            {"label": "Levels", "url": "academics:level_list", "icon": "bi-layers", "cls": "warning"},
+            {"label": "Classes", "url": "academics:class_list", "icon": "bi-easel", "cls": "danger"},
+            {"label": "Academic Years", "url": "academics:year_list", "icon": "bi-calendar3", "cls": "primary"},
+            {"label": "Fee Types", "url": "finance:feetype_list", "icon": "bi-tag", "cls": "success"},
+            {"label": "Fee Assignments", "url": "finance:assignment_list", "icon": "bi-clipboard-check", "cls": "warning"},
+            {"label": "Students", "url": "students:student_list", "icon": "bi-mortarboard", "cls": "danger"},
+            {"label": "Collect Payment", "url": "payments:payment_search", "icon": "bi-cash-coin", "cls": "primary"},
+            {"label": "Payment History", "url": "payments:payment_history", "icon": "bi-receipt", "cls": "success"},
+            {"label": "Reports", "url": "reports:home", "icon": "bi-file-earmark-spreadsheet", "cls": "warning"},
+            {"label": "Audit Log", "url": "payments:audit_log", "icon": "bi-clock-history", "cls": "danger"},
+        ],
     }
     return render(request, "dashboard/admin_dashboard.html", context)

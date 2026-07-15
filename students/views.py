@@ -187,6 +187,7 @@ def student_edit(request, pk):
 
 
 @login_required
+@login_required
 def student_import(request):
     if request.method == "POST" and request.FILES.get("file"):
         file = request.FILES["file"]
@@ -199,52 +200,59 @@ def student_import(request):
             return redirect("students:student_import")
 
         results = {"success": [], "errors": []}
-        for i, row in enumerate(rows, start=2):
-            if not any(row):
-                continue
-            try:
-                student_id = str(row[0] or "").strip()
-                first_name = str(row[1] or "").strip()
-                last_name = str(row[2] or "").strip()
-                gender = str(row[3] or "").strip().upper()[:1]
-                dob = row[4] or None
-                parent_name = str(row[5] or "").strip()
-                parent_phone = str(row[6] or "").strip()
-                branch_code = str(row[7] or "").strip()
-                level_code = str(row[8] or "").strip()
-                class_name = str(row[9] or "").strip()
+        
+        # Use atomic transaction to ensure all-or-nothing import
+        try:
+            with transaction.atomic():
+                for i, row in enumerate(rows, start=2):
+                    if not any(row):
+                        continue
+                    try:
+                        student_id = str(row[0] or "").strip()
+                        first_name = str(row[1] or "").strip()
+                        last_name = str(row[2] or "").strip()
+                        gender = str(row[3] or "").strip().upper()[:1]
+                        dob = row[4] or None
+                        parent_name = str(row[5] or "").strip()
+                        parent_phone = str(row[6] or "").strip()
+                        branch_code = str(row[7] or "").strip()
+                        level_code = str(row[8] or "").strip()
+                        class_name = str(row[9] or "").strip()
 
-                if not student_id or not first_name or not last_name:
-                    results["errors"].append(f"Row {i}: Missing required fields")
-                    continue
-                if Student.objects.filter(student_id=student_id).exists():
-                    results["errors"].append(f"Row {i}: Student ID '{student_id}' already exists")
-                    continue
+                        if not student_id or not first_name or not last_name:
+                            results["errors"].append(f"Row {i}: Missing required fields")
+                            continue
+                        if Student.objects.filter(student_id=student_id).exists():
+                            results["errors"].append(f"Row {i}: Student ID '{student_id}' already exists")
+                            continue
 
-                branch = Branch.objects.filter(code=branch_code).first()
-                if not branch:
-                    results["errors"].append(f"Row {i}: Branch '{branch_code}' not found")
-                    continue
+                        branch = Branch.objects.filter(code=branch_code).first()
+                        if not branch:
+                            results["errors"].append(f"Row {i}: Branch '{branch_code}' not found")
+                            continue
 
-                level = Level.objects.filter(code=level_code).first()
-                if not level:
-                    results["errors"].append(f"Row {i}: Level '{level_code}' not found")
-                    continue
+                        level = Level.objects.filter(code=level_code).first()
+                        if not level:
+                            results["errors"].append(f"Row {i}: Level '{level_code}' not found")
+                            continue
 
-                school_class = SchoolClass.objects.filter(name=class_name, level=level).first()
-                if not school_class:
-                    results["errors"].append(f"Row {i}: Class '{class_name}' not found for level '{level_code}'")
-                    continue
+                        school_class = SchoolClass.objects.filter(name=class_name, level=level).first()
+                        if not school_class:
+                            results["errors"].append(f"Row {i}: Class '{class_name}' not found for level '{level_code}'")
+                            continue
 
-                Student.objects.create(
-                    student_id=student_id, first_name=first_name, last_name=last_name,
-                    gender=gender, date_of_birth=dob,
-                    parent_name=parent_name, parent_phone=parent_phone,
-                    branch=branch, level=level, school_class=school_class,
-                )
-                results["success"].append(f"Row {i}: {first_name} {last_name}")
-            except Exception as e:
-                results["errors"].append(f"Row {i}: {e}")
+                        Student.objects.create(
+                            student_id=student_id, first_name=first_name, last_name=last_name,
+                            gender=gender, date_of_birth=dob,
+                            parent_name=parent_name, parent_phone=parent_phone,
+                            branch=branch, level=level, school_class=school_class,
+                        )
+                        results["success"].append(f"Row {i}: {first_name} {last_name}")
+                    except Exception as e:
+                        results["errors"].append(f"Row {i}: {e}")
+        except Exception as e:
+            messages.error(request, f"Import failed: {e}. No students were imported.")
+            return redirect("students:student_import")
 
         messages.success(request, f"Imported {len(results['success'])} students.")
         if results["errors"]:
@@ -292,4 +300,18 @@ def student_template(request):
     response["Content-Disposition"] = "attachment; filename=student_template.xlsx"
     wb.save(response)
     return response
+
+
+@login_required
+def student_delete(request, pk):
+    student = get_object_or_404(Student, pk=pk)
+    if not request.user.is_admin and request.user.branch_id != student.branch_id:
+        messages.error(request, "Access denied.")
+        return redirect("students:student_list")
+    if request.method == "POST":
+        name = student.full_name
+        student.delete()
+        messages.success(request, f"Student '{name}' deleted.")
+        return redirect("students:student_list")
+    return render(request, "students/student_confirm_delete.html", {"student": student})
 

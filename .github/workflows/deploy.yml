@@ -1,0 +1,111 @@
+name: Auto Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - production
+
+env:
+  PYTHON_VERSION: '3.12'
+  DJANGO_SETTINGS_MODULE: 'ecome_finance.settings'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Django checks
+      run: python manage.py check
+    
+    - name: Run migrations
+      run: python manage.py migrate --dry-run
+    
+    - name: Collect static files
+      run: python manage.py collectstatic --noinput --dry-run
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Configure environment
+      run: |
+        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+        echo "DEBUG=False" >> .env
+        echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
+        echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+        echo "PAYPACK_CLIENT_ID=${{ secrets.PAYPACK_CLIENT_ID }}" >> .env
+        echo "PAYPACK_CLIENT_SECRET=${{ secrets.PAYPACK_CLIENT_SECRET }}" >> .env
+        echo "PAYPACK_WEBHOOK_URL=${{ secrets.PAYPACK_WEBHOOK_URL }}" >> .env
+        echo "SECURE_SSL_REDIRECT=True" >> .env
+        echo "CSRF_COOKIE_SECURE=True" >> .env
+        echo "SESSION_COOKIE_SECURE=True" >> .env
+        echo "SECURE_HSTS_SECONDS=31536000" >> .env
+        echo "SECURE_HSTS_INCLUDE_SUBDOMAINS=True" >> .env
+        echo "SECURE_HSTS_PRELOAD=True" >> .env
+    
+    - name: Clean and reset database
+      run: |
+        echo "🧹 Cleaning deployment environment..."
+        python manage.py migrate
+        python scripts/init_deployment.py
+    
+    - name: Collect static files
+      run: |
+        echo "📦 Collecting static files..."
+        python manage.py collectstatic --noinput
+    
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production..."
+        # Deploy commands depend on your hosting (Heroku, Railway, etc.)
+        # Example for Heroku:
+        # git push heroku main
+        # Example for Railway:
+        # railway up
+        # Example for traditional server:
+        # ssh deploy@server 'cd /app && git pull && ./deploy.sh'
+    
+    - name: Verify deployment
+      run: |
+        echo "✅ Deployment verification..."
+        python manage.py check --deploy
+    
+    - name: Send notification
+      if: success()
+      run: |
+        echo "✅ Deployment successful!"
+        # Optionally send Slack/Email notification
+    
+    - name: Handle deployment failure
+      if: failure()
+      run: |
+        echo "❌ Deployment failed!"
+        # Optionally send failure notification
+        exit 1

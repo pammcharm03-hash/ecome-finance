@@ -9,32 +9,32 @@
         <div class="stat-card text-center">
             {% if payment.status == 'successful' %}
             <div class="mb-3"><i class="bi bi-check-circle-fill text-success" style="font-size:4rem;"></i></div>
-            <h3 class="fw-bold text-success">Payment Successful</h3>
+            <h3 class="fw-bold text-success" id="status-title">✓ Payment Successful</h3>
             {% elif payment.status == 'pending' %}
             <div class="mb-3">
-                <div class="spinner-border text-primary" style="width:4rem;height:4rem;" role="status"></div>
+                <div class="spinner-border text-primary" id="status-spinner" style="width:4rem;height:4rem;" role="status"></div>
             </div>
-            <h3 class="fw-bold text-warning">Waiting for Confirmation</h3>
-            <p class="text-muted">The parent should receive a Mobile Money prompt on {{ payment.parent_phone }}.</p>
+            <h3 class="fw-bold text-warning" id="status-title">Waiting for Confirmation</h3>
+            <p class="text-muted" id="status-message">The parent should receive a Mobile Money prompt on {{ payment.parent_phone }}.</p>
             {% elif payment.status == 'failed' %}
             <div class="mb-3"><i class="bi bi-x-circle-fill text-danger" style="font-size:4rem;"></i></div>
-            <h3 class="fw-bold text-danger">Payment Failed</h3>
-            {% if payment.failure_reason %}<p class="text-muted">{{ payment.failure_reason }}</p>{% endif %}
+            <h3 class="fw-bold text-danger" id="status-title">✗ Payment Failed</h3>
+            {% if payment.failure_reason %}<p class="text-muted" id="failure-reason">{{ payment.failure_reason }}</p>{% endif %}
             {% endif %}
 
             <div class="table-responsive mt-4">
                 <table class="table table-bordered">
-                    <tr><td class="text-muted">Receipt Number</td><td class="fw-bold"><code>{{ payment.receipt_number }}</code></td></tr>
-                    <tr><td class="text-muted">Student</td><td>{{ payment.student.full_name }}</td></tr>
-                    <tr><td class="text-muted">Fee Type</td><td>{{ payment.fee_type.name }}</td></tr>
-                    <tr><td class="text-muted">Amount</td><td class="fw-bold">{{ payment.amount|floatformat:0 }} RWF</td></tr>
-                    <tr><td class="text-muted">Phone</td><td>{{ payment.parent_phone }}</td></tr>
-                    <tr><td class="text-muted">Status</td><td><span class="status-badge status-{{ payment.status }}">{{ payment.get_status_display }}</span></td></tr>
-                    <tr><td class="text-muted">Date</td><td>{{ payment.created_at|date:'M d, Y H:i' }}</td></tr>
+                    <tr><td class="text-muted">Receipt Number</td><td class="fw-bold"><code id="receipt-number">{{ payment.receipt_number }}</code></td></tr>
+                    <tr><td class="text-muted">Student</td><td id="student-name">{{ payment.student.full_name }}</td></tr>
+                    <tr><td class="text-muted">Fee Type</td><td id="fee-type">{{ payment.fee_type.name }}</td></tr>
+                    <tr><td class="text-muted">Amount</td><td class="fw-bold" id="amount">{{ payment.amount|floatformat:0 }} RWF</td></tr>
+                    <tr><td class="text-muted">Phone</td><td id="phone">{{ payment.parent_phone }}</td></tr>
+                    <tr><td class="text-muted">Status</td><td><span class="status-badge status-{{ payment.status }}" id="status-badge">{{ payment.get_status_display }}</span></td></tr>
+                    <tr><td class="text-muted">Date</td><td id="created-date">{{ payment.created_at|date:'M d, Y H:i' }}</td></tr>
                 </table>
             </div>
 
-            <div class="d-flex gap-2 justify-content-center mt-3">
+            <div class="d-flex gap-2 justify-content-center mt-3" id="action-buttons">
                 {% if payment.status == 'successful' %}
                 <a href="{% url 'payments:receipt_view' payment.pk %}" class="btn btn-primary"><i class="bi bi-printer me-1"></i>View Receipt</a>
                 {% endif %}
@@ -47,12 +47,87 @@
 
             {% if payment.status == 'pending' %}
             <div class="mt-3">
-                <p class="small text-muted"><i class="bi bi-arrow-clockwise me-1"></i>Page will auto-refresh in 10 seconds...</p>
-                <meta http-equiv="refresh" content="10">
+                <p class="small text-muted"><i class="bi bi-arrow-clockwise me-1"></i><span id="poll-status">Checking status automatically...</span></p>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const paymentId = {{ payment.pk }};
+const apiUrl = "{% url 'payments:payment_status_api' payment.pk %}";
+let pollCount = 0;
+const maxPolls = 60; // 5 minutes at 5-second intervals
+const pollInterval = 5000; // 5 seconds
+
+function updatePaymentStatus() {
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            pollCount++;
+            
+            // Update status badge
+            document.getElementById('status-badge').textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+            document.getElementById('status-badge').className = 'status-badge status-' + data.status;
+            
+            // Handle successful payment
+            if (data.is_success) {
+                clearInterval(window.pollTimer);
+                document.getElementById('status-spinner')?.remove();
+                document.getElementById('status-title').innerHTML = '✓ Payment Successful';
+                document.getElementById('status-title').className = 'fw-bold text-success';
+                document.getElementById('status-message')?.remove();
+                document.getElementById('poll-status').textContent = 'Payment confirmed! Reloading...';
+                
+                // Show receipt button
+                const buttons = document.getElementById('action-buttons');
+                buttons.innerHTML = `
+                    <a href="/payments/receipt/{{ payment.pk }}/" class="btn btn-primary"><i class="bi bi-printer me-1"></i>View Receipt</a>
+                    <a href="{% url 'payments:payment_search' %}" class="btn btn-outline-primary">New Payment</a>
+                    <a href="{% url 'payments:payment_history' %}" class="btn btn-outline-secondary">History</a>
+                `;
+                
+                // Reload page after 2 seconds to show updated status
+                setTimeout(() => location.reload(), 2000);
+                return;
+            }
+            
+            // Handle failed payment
+            if (data.is_failed) {
+                clearInterval(window.pollTimer);
+                document.getElementById('status-spinner')?.remove();
+                document.getElementById('status-title').innerHTML = '✗ Payment Failed';
+                document.getElementById('status-title').className = 'fw-bold text-danger';
+                if (data.failure_reason) {
+                    document.getElementById('failure-reason').textContent = data.failure_reason;
+                }
+                document.getElementById('poll-status').textContent = 'Payment failed. Please try again.';
+                return;
+            }
+            
+            // Still pending
+            if (pollCount < maxPolls) {
+                document.getElementById('poll-status').textContent = `Checking status... (${pollCount}/${maxPolls})`;
+            } else {
+                clearInterval(window.pollTimer);
+                document.getElementById('poll-status').textContent = 'Status check timed out. Click "Check Status" to verify.';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking payment status:', error);
+            document.getElementById('poll-status').textContent = 'Error checking status. Please try again.';
+        });
+}
+
+// Start polling if payment is pending
+if (document.getElementById('status-spinner')) {
+    window.pollTimer = setInterval(updatePaymentStatus, pollInterval);
+    // Check immediately
+    updatePaymentStatus();
+}
+</script>
 {% endblock %}

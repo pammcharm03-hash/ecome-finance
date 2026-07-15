@@ -1,3 +1,4 @@
+
 """
 Paypack API service layer.
 Handles communication with Paypack Rwanda Mobile Money API (v1).
@@ -13,8 +14,12 @@ Key facts about the Paypack API:
             status, amount, phone, timestamp.
 The responses are handled here.
 """
+import uuid
+import logging
 import requests
 from django.conf import settings
+
+logger = logging.getLogger('payments')
 
 
 class PaypackError(Exception):
@@ -57,15 +62,25 @@ def get_access_token():
     return token
 
 
-def initiate_payment(phone_number, amount, reference, description="", callback_url=None):
+def initiate_payment(phone_number, amount, reference, description="", callback_url=None, metadata=None):
     """
     Initiate a mobile money payment request (cashin) via Paypack.
+    
+    Args:
+        phone_number: Mobile number in 07xxxxxxxx format
+        amount: Amount in RWF as Decimal or int
+        reference: Our internal receipt number (used as Idempotency-Key)
+        description: Description of payment (for logging)
+        callback_url: Webhook URL for Paypack to call
+        metadata: Dict with extra data (student_id, fee_type, etc.) for tracking
 
     Returns a dict with the server-side transaction identifiers:
         {
             "client_transaction_id": str,
             "reference": str,           # echoes back the reference we sent
             "status": str,              # usually "pending"
+            "amount": int,
+            "phone": str,
         }
     """
     client_id, client_secret = _get_credentials()
@@ -73,44 +88,69 @@ def initiate_payment(phone_number, amount, reference, description="", callback_u
     try:
         token = get_access_token()
         url = f"{_get_base_url()}/transactions/cashin"
+        
+        # Build request body with database data
         payload = {
-            "phone": phone_number,
+            "number": phone_number,
             "amount": int(float(amount)),
-            "reference": reference,
-            "description": description or "School fee payment",
         }
-        if callback_url:
-            payload["callback"] = callback_url
+        
+        # If metadata is provided, include it for tracking (as string for reference)
+        if metadata:
+            # Store metadata info in logging/audit trail
+            logger.info(f"Payment metadata: {metadata}")
 
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "Idempotency-Key": reference or str(uuid.uuid4()),
         }
-        resp = requests.post(url, json=payload, headers=headers, timeout=15)
+        
+        logger.info(f"PayPack Request - Phone: {phone_number}, Amount: {payload['amount']}, Ref: {reference}, Desc: {description}")
+        
+        resp = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=15,
+        )
+
+        # Log response
+        logger.info(f"PayPack Response - Status: {resp.status_code}, Body: {resp.text}")
+
         resp.raise_for_status()
         body = resp.json()
     except requests.RequestException as e:
+        logger.error(f"PayPack payment request failed: {str(e)}")
         raise PaypackError(f"Paypack payment request failed: {e}")
     except ValueError as e:
+        logger.error(f"Invalid Paypack response: {str(e)}")
         raise PaypackError(f"Invalid Paypack cashin response: {e}")
 
-    # Paypack nests the useful data under "data".
-    data = body.get("data", {}) or {}
-    api_status = body.get("status") or data.get("status")
+    # Paypack returns the cashin result directly (not wrapped in "data"):
+    #   {"amount": 1000, "ref": "...", "status": "pending", ...}
+    data = body
+    api_status = (body.get("status") or "").lower()
 
-    if api_status not in (None, "success", "pending", "accepted"):
+    if api_status not in (None, "", "success", "pending", "accepted"):
+        error_msg = body.get('message', body.get('detail', body.get('error', api_status)))
+        logger.warning(f"PayPack rejected payment: {error_msg}")
         raise PaypackError(
-            f"Paypack rejected the payment: {body.get('message', api_status)}"
+            f"Paypack rejected the payment: {error_msg}"
         )
 
-    client_transaction_id = data.get("client_transaction_id") or data.get("id") or ""
-    returned_reference = data.get("reference") or reference
+    client_transaction_id = data.get("ref", "")
+    returned_reference = data.get("reference", reference) or reference
+
+    logger.info(f"Payment initiated successfully - Ref: {client_transaction_id}, Status: {api_status}")
 
     return {
         "client_transaction_id": client_transaction_id,
         "reference": returned_reference,
         "status": api_status or "pending",
+        "amount": data.get("amount", int(float(amount))),
+        "phone": data.get("phone", phone_number),
     }
 
 

@@ -1,10 +1,13 @@
 from pathlib import Path
+import os
+from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-jo%p=9gmb(gl7)@4867&9*$q-=qwgjimgx^5(euye=$3w(g(@t'
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+# Security: Use environment variables for sensitive data
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-jo%p=9gmb(gl7)@4867&9*$q-=qwgjimgx^5(euye=$3w(g(@t')
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -34,6 +37,17 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Security Headers
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False, cast=bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=False, cast=bool)
+X_FRAME_OPTIONS = 'DENY'
 
 ROOT_URLCONF = 'ecome_finance.urls'
 
@@ -86,14 +100,95 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Paypack settings
-PAYPACK_CLIENT_ID = 'cd948e08-8025-11f1-846c-deadd43720af'
-PAYPACK_CLIENT_SECRET = 'f37c183d25b31ced1c9f0d72637f6704da39a3ee5e6b4b0d3255bfef95601890afd80709'
-PAYPACK_ENV = 'sandbox'
-# Publicly reachable webhook endpoint Paypack will call back on.
-# Override in production with the real domain (e.g. https://ecome-finance-1.onrender.com/payments/webhook/).
-PAYPACK_WEBHOOK_URL = 'https://ecome-finance-1.onrender.com/payments/webhook/'
+# Paypack settings - Use environment variables for credentials
+PAYPACK_CLIENT_ID = config('PAYPACK_CLIENT_ID', default='cd948e08-8025-11f1-846c-deadd43720af')
+PAYPACK_CLIENT_SECRET = config('PAYPACK_CLIENT_SECRET', default='f37c183d25b31ced1c9f0d72637f6704da39a3ee5e6b4b0d3255bfef95601890afd80709')
+PAYPACK_ENV = config('PAYPACK_ENV', default='sandbox')
+PAYPACK_WEBHOOK_URL = config('PAYPACK_WEBHOOK_URL', default='https://ecome-finance-1.onrender.com/payments/webhook/')
 
 # School info
 SCHOOL_NAME = 'ECOME Finance'
 SCHOOL_LOGO = None
+
+# Logging Configuration for Production
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'ecome.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'payment_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'payments.log',
+            'maxBytes': 1024 * 1024 * 5,  # 5MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'payments': {
+            'handlers': ['console', 'payment_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# Create logs directory if it doesn't exist
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# Caching Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ecome-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
+
+# Email Configuration for Password Resets
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@ecome-finance.local')

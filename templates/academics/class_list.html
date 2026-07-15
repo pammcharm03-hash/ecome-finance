@@ -14,7 +14,10 @@
         <tbody>
             {% for c in classes %}
             <tr><td class="fw-medium">{{ c.name }}</td><td><code>{{ c.code }}</code></td><td>{{ c.level.name }}</td><td>{{ c.branch.name|default:'All' }}</td><td>{{ c.students.count }}</td>
-                <td class="text-end"><a href="{% url 'academics:class_edit' c.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a></td></tr>
+                <td class="text-end">
+                    <a href="{% url 'academics:class_edit' c.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'academics:class_delete' c.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                </td></tr>
             {% empty %}
             <tr><td colspan="6"><div class="empty-state"><i class="bi bi-easel"></i><p>No classes yet.</p></div></td></tr>
             {% endfor %}

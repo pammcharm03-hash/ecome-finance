@@ -1,5 +1,7 @@
 import json
 import uuid
+import re
+from decimal import Decimal, InvalidOperation
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -61,6 +63,35 @@ def _get_student_balance(student, fee_type):
     return required, paid, max(required - paid, 0)
 
 
+def _validate_phone_number(phone):
+    """Validate Rwanda mobile phone number format."""
+    # Rwanda phone numbers: start with +250 or 250 or 07 or 06
+    phone = re.sub(r'\s', '', str(phone).strip())
+    # Normalize to 07/06 format if needed
+    if phone.startswith('+250'):
+        phone = '0' + phone[4:]
+    elif phone.startswith('250'):
+        phone = '0' + phone[3:]
+    
+    # Valid Rwanda formats: 07xxxxxxxx or 06xxxxxxxx
+    if not re.match(r'^0[76]\d{8}$', phone):
+        raise ValueError("Invalid Rwanda phone number format. Use 07xxxxxxxx or 06xxxxxxxx")
+    return phone
+
+
+def _validate_amount(amount_str):
+    """Validate and convert amount to Decimal."""
+    try:
+        amount = Decimal(str(amount_str).strip())
+        if amount <= 0:
+            raise ValueError("Amount must be greater than zero")
+        if amount.as_tuple().exponent < -2:
+            raise ValueError("Amount cannot have more than 2 decimal places")
+        return amount
+    except (InvalidOperation, ValueError) as e:
+        raise ValueError(f"Invalid amount: {e}")
+
+
 @login_required
 def payment_search(request):
     """Accountant searches for a student to collect payment."""
@@ -108,22 +139,23 @@ def payment_process(request, student_pk):
             return redirect("payments:payment_process", student.pk)
 
         required, paid, remaining = _get_student_balance(student, fee_type)
+        
+        # Validate amount
         try:
-            amount_val = float(amount)
-        except (TypeError, ValueError):
-            messages.error(request, "Invalid amount.")
+            amount_val = _validate_amount(amount)
+        except ValueError as e:
+            messages.error(request, str(e))
             return redirect("payments:payment_process", student.pk)
 
-        if amount_val <= 0:
-            messages.error(request, "Amount must be greater than zero.")
-            return redirect("payments:payment_process", student.pk)
-
-        if remaining > 0 and amount_val > remaining:
+        if remaining > 0 and amount_val > Decimal(str(remaining)):
             messages.error(request, f"Amount exceeds remaining balance of {remaining} RWF.")
             return redirect("payments:payment_process", student.pk)
 
-        if not phone:
-            messages.error(request, "Phone number is required.")
+        # Validate phone number
+        try:
+            phone = _validate_phone_number(phone)
+        except ValueError as e:
+            messages.error(request, str(e))
             return redirect("payments:payment_process", student.pk)
 
         # Create pending payment
@@ -131,7 +163,7 @@ def payment_process(request, student_pk):
             student=student,
             fee_type=fee_type,
             fee_assignment=fee_options.filter(fee_type=fee_type).first(),
-            amount=amount_val,
+            amount=float(amount_val),
             parent_phone=phone,
             status=Payment.Status.PENDING,
             accountant=request.user,
@@ -141,30 +173,47 @@ def payment_process(request, student_pk):
         # Try to call Paypack
         try:
             callback_url = getattr(settings, "PAYPACK_WEBHOOK_URL", None)
+            
+            # Prepare metadata from database for tracking
+            metadata = {
+                "student_id": student.student_id,
+                "student_name": student.full_name,
+                "fee_type": fee_type.name,
+                "branch": student.branch.name,
+                "class": student.school_class.name if student.school_class else "N/A",
+            }
+            
             result = initiate_payment(
                 phone_number=phone,
                 amount=amount_val,
                 reference=payment.receipt_number,
                 description=f"{fee_type.name} - {student.full_name}",
                 callback_url=callback_url,
+                metadata=metadata,
             )
-            # result is the parsed Paypack "data" payload.
+            # result contains: client_transaction_id, reference, status, amount, phone
             payment.transaction_ref = result.get("client_transaction_id") or result.get("reference", "")
             payment.paypack_ref = result.get("reference", "")
             payment.save()
 
             AuditLog.objects.create(
                 user=request.user, action="Payment Initiated",
-                detail=f"Payment {payment.receipt_number} for {student.full_name} - {fee_type.name} - {amount_val} RWF",
+                detail=f"Payment {payment.receipt_number} for {student.full_name} - {fee_type.name} - {amount_val} RWF - Ref: {payment.transaction_ref}",
                 branch=student.branch,
             )
-            messages.info(request, f"Payment request sent. Parent will receive a Mobile Money prompt on {phone}. Waiting for confirmation...")
+            messages.success(request, f"✓ Payment request sent to {phone}. Parent will receive a Mobile Money prompt.")
             return redirect("payments:payment_status", payment.pk)
 
         except PaypackError as e:
             payment.status = Payment.Status.FAILED
             payment.failure_reason = str(e)
             payment.save()
+            
+            AuditLog.objects.create(
+                user=request.user, action="Payment Failed",
+                detail=f"Payment initiation failed: {str(e)}",
+                branch=student.branch,
+            )
             messages.error(request, f"Payment failed: {e}")
             return redirect("payments:payment_status", payment.pk)
 
@@ -344,6 +393,30 @@ def webhook(request):
         return JsonResponse({"status": "ok", "message": f"Ignored status: {status}"})
 
     return JsonResponse({"status": "ok"})
+
+
+@login_required
+def payment_status_api(request, pk):
+    """AJAX endpoint to get payment status (for real-time polling from UI)."""
+    payment = get_object_or_404(Payment, pk=pk)
+    if not request.user.is_admin and request.user.branch_id != payment.branch_id:
+        return JsonResponse({"error": "Access denied"}, status=403)
+    
+    return JsonResponse({
+        "status": payment.status,
+        "receipt_number": payment.receipt_number,
+        "student_name": payment.student.full_name,
+        "fee_type": payment.fee_type.name,
+        "amount": float(payment.amount),
+        "phone": payment.parent_phone,
+        "created_at": payment.created_at.isoformat(),
+        "updated_at": payment.updated_at.isoformat(),
+        "completed_at": payment.completed_at.isoformat() if payment.completed_at else None,
+        "failure_reason": payment.failure_reason or "",
+        "is_success": payment.status == Payment.Status.SUCCESSFUL,
+        "is_pending": payment.status == Payment.Status.PENDING,
+        "is_failed": payment.status == Payment.Status.FAILED,
+    })
 
 
 @login_required

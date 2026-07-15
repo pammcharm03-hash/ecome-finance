@@ -47,6 +47,18 @@ def feetype_edit(request, pk):
     return render(request, "finance/feetype_form.html", {"fee_type": ft, "title": "Edit Fee Type"})
 
 
+@login_required
+@user_passes_test(is_admin)
+def feetype_delete(request, pk):
+    ft = get_object_or_404(FeeType, pk=pk)
+    if request.method == "POST":
+        name = ft.name
+        ft.delete()
+        messages.success(request, f"Fee type '{name}' deleted.")
+        return redirect("finance:feetype_list")
+    return render(request, "finance/confirm_delete.html", {"object": ft, "type": "Fee Type", "cancel_url": "finance:feetype_list"})
+
+
 # --- Fee Assignments ---
 
 @login_required
