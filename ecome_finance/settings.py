@@ -90,6 +90,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PAYPACK_CLIENT_ID = 'cd948e08-8025-11f1-846c-deadd43720af'
 PAYPACK_CLIENT_SECRET = 'f37c183d25b31ced1c9f0d72637f6704da39a3ee5e6b4b0d3255bfef95601890afd80709'
 PAYPACK_ENV = 'sandbox'
+# Publicly reachable webhook endpoint Paypack will call back on.
+# Override in production with the real domain (e.g. https://ecome-finance-1.onrender.com/payments/webhook/).
+PAYPACK_WEBHOOK_URL = 'https://ecome-finance-1.onrender.com/payments/webhook/'
 
 # School info
 SCHOOL_NAME = 'ECOME Finance'

@@ -7,6 +7,7 @@ urlpatterns = [
     path("search/", views.payment_search, name="payment_search"),
     path("process/<int:student_pk>/", views.payment_process, name="payment_process"),
     path("status/<int:pk>/", views.payment_status, name="payment_status"),
+    path("verify/<int:pk>/", views.payment_verify, name="payment_verify"),
     path("history/", views.payment_history, name="payment_history"),
     path("receipt/<int:pk>/", views.receipt_view, name="receipt_view"),
     path("webhook/", views.webhook, name="webhook"),

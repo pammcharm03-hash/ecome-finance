@@ -13,7 +13,13 @@ from students.models import Student
 from finance.models import FeeType, FeeAssignment
 from academics.models import AcademicYear
 from payments.models import Payment, AuditLog
-from payments.paypack import initiate_payment, PaypackError
+from payments.paypack import (
+    initiate_payment,
+    parse_webhook_payload,
+    get_transaction_status,
+    PaypackError,
+)
+from django.conf import settings
 
 
 def _filter_branch(qs, user):
@@ -134,14 +140,17 @@ def payment_process(request, student_pk):
 
         # Try to call Paypack
         try:
+            callback_url = getattr(settings, "PAYPACK_WEBHOOK_URL", None)
             result = initiate_payment(
                 phone_number=phone,
                 amount=amount_val,
                 reference=payment.receipt_number,
-                description=f"{fee_type.name} - {student.full_name}"
+                description=f"{fee_type.name} - {student.full_name}",
+                callback_url=callback_url,
             )
-            payment.transaction_ref = result.get("reference", "") or result.get("transaction_ref", "")
-            payment.paypack_ref = result.get("id", "")
+            # result is the parsed Paypack "data" payload.
+            payment.transaction_ref = result.get("client_transaction_id") or result.get("reference", "")
+            payment.paypack_ref = result.get("reference", "")
             payment.save()
 
             AuditLog.objects.create(
@@ -198,6 +207,44 @@ def payment_status(request, pk):
 
 
 @login_required
+def payment_verify(request, pk):
+    """Manually poll Paypack for the latest transaction status (fallback to webhook)."""
+    payment = get_object_or_404(Payment, pk=pk)
+    if not request.user.is_admin and request.user.branch_id != payment.branch_id:
+        messages.error(request, "Access denied.")
+        return redirect("payments:payment_search")
+
+    if payment.status == Payment.Status.SUCCESSFUL:
+        return redirect("payments:payment_status", payment.pk)
+
+    ref = payment.transaction_ref or payment.paypack_ref or payment.receipt_number
+    try:
+        data = get_transaction_status(ref)
+        status = (data.get("status") or "").lower()
+        if status in ("success", "successful", "completed"):
+            payment.status = Payment.Status.SUCCESSFUL
+            payment.completed_at = timezone.now()
+            payment.save()
+            AuditLog.objects.create(
+                user=request.user, action="Payment Successful",
+                detail=f"Payment {payment.receipt_number} confirmed via manual status check - {payment.amount} RWF",
+                branch=payment.branch,
+            )
+            messages.success(request, "Payment confirmed as successful.")
+        elif status in ("failed", "error", "declined", "cancelled", "canceled"):
+            payment.status = Payment.Status.FAILED
+            payment.failure_reason = "Payment declined or failed via Paypack"
+            payment.save()
+            messages.warning(request, "Payment was not successful.")
+        else:
+            messages.info(request, "Payment is still pending on Paypack.")
+    except PaypackError as e:
+        messages.error(request, f"Could not verify payment: {e}")
+
+    return redirect("payments:payment_status", payment.pk)
+
+
+@login_required
 def payment_history(request):
     """View payment history."""
     payments = _filter_branch(
@@ -241,21 +288,27 @@ def webhook(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
+    payload = parse_webhook_payload(request.body)
+    if not payload:
         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
-    # Extract transaction info from webhook
-    transaction_ref = data.get("reference") or data.get("reference_number", "")
-    paypack_ref = data.get("id") or data.get("transaction_id", "")
-    status = data.get("status", "").lower()
-    amount = data.get("amount", 0)
+    status = payload.get("status", "")
+    ref = payload.get("ref", "")
+    external_ref = payload.get("external_reference", "")
+    client_transaction_id = payload.get("client_transaction_id", "")
 
-    # Find payment by receipt number (used as reference)
-    payment = Payment.objects.filter(receipt_number=transaction_ref).first()
-    if not payment:
-        payment = Payment.objects.filter(transaction_ref=transaction_ref).first()
+    # Find payment by the reference we originally sent (receipt number) or by
+    # Paypack's internal transaction id.
+    payment = None
+    for candidate in (external_ref, ref, client_transaction_id):
+        if not candidate:
+            continue
+        payment = (
+            Payment.objects.filter(receipt_number=candidate).first()
+            or Payment.objects.filter(transaction_ref=candidate).first()
+        )
+        if payment:
+            break
 
     if not payment:
         return JsonResponse({"status": "error", "message": "Payment not found"}, status=404)
@@ -266,7 +319,8 @@ def webhook(request):
 
     if status in ("success", "successful", "completed"):
         payment.status = Payment.Status.SUCCESSFUL
-        payment.paypack_ref = paypack_ref
+        payment.transaction_ref = client_transaction_id or payment.transaction_ref
+        payment.paypack_ref = ref or payment.paypack_ref
         payment.completed_at = timezone.now()
         payment.save()
 
@@ -275,9 +329,9 @@ def webhook(request):
             detail=f"Payment {payment.receipt_number} confirmed via webhook - {payment.amount} RWF",
             branch=payment.branch,
         )
-    elif status in ("failed", "error", "declined"):
+    elif status in ("failed", "error", "declined", "cancelled", "canceled"):
         payment.status = Payment.Status.FAILED
-        payment.failure_reason = data.get("message", data.get("reason", "Payment declined"))
+        payment.failure_reason = "Payment declined or failed via Paypack"
         payment.save()
 
         AuditLog.objects.create(
@@ -285,6 +339,9 @@ def webhook(request):
             detail=f"Payment {payment.receipt_number} failed - {payment.failure_reason}",
             branch=payment.branch,
         )
+    else:
+        # pending or unknown: leave as pending, just acknowledge receipt.
+        return JsonResponse({"status": "ok", "message": f"Ignored status: {status}"})
 
     return JsonResponse({"status": "ok"})
 
