@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Process Payment - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}Process Payment{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header">
+    <h1><i class="bi bi-cash-coin me-2"></i>Process Payment</h1>
+    <div class="actions"><a href="{% url 'payments:payment_search' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back to Search</a></div>
+</div>
+
+<div class="row g-3">
+    <!-- Student info -->
+    <div class="col-lg-4">
+        <div class="stat-card">
+            <h6 class="fw-bold mb-3"><i class="bi bi-person me-2"></i>Student</h6>
+            <h5 class="fw-bold">{{ student.full_name }}</h5>
+            <table class="table table-borderless table-sm mt-2">
+                <tr><td class="text-muted small">Student ID</td><td><code>{{ student.student_id }}</code></td></tr>
+                <tr><td class="text-muted small">Class</td><td>{{ student.school_class.name }}</td></tr>
+                <tr><td class="text-muted small">Level</td><td>{{ student.level.name }}</td></tr>
+                <tr><td class="text-muted small">Branch</td><td>{{ student.branch.name }}</td></tr>
+                <tr><td class="text-muted small">Parent</td><td>{{ student.parent_name|default:'-' }}</td></tr>
+                <tr><td class="text-muted small">Phone</td><td>{{ student.parent_phone|default:'-' }}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Payment form -->
+    <div class="col-lg-8">
+        <div class="stat-card">
+            <form method="post">
+                {% csrf_token %}
+                <h6 class="fw-bold mb-3"><i class="bi bi-credit-card me-2"></i>Payment Details</h6>
+
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Fee Type *</label>
+                    <select name="fee_type" class="form-select form-select-lg" required>
+                        <option value="">-- Select Fee Type --</option>
+                        {% for f in fee_choices %}
+                        <option value="{{ f.fee_type_id }}">{{ f.fee_type.name }} - Required: {{ f.required|floatformat:0 }} RWF | Remaining: {{ f.remaining|floatformat:0 }} RWF</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">Amount (RWF) *</label>
+                        <input type="number" name="amount" class="form-control form-control-lg" min="100" step="100" required placeholder="0">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">Payer Phone *</label>
+                        <input type="text" name="phone" class="form-control form-control-lg" value="{{ student.parent_phone|default:'' }}" required placeholder="0781234567">
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-1"></i> The parent will receive a Mobile Money prompt on their phone to enter their PIN and confirm the payment.
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    <i class="bi bi-send me-2"></i>Process Payment
+                </button>
+            </form>
+        </div>
+
+        {% if fee_choices %}
+        <div class="stat-card mt-3">
+            <h6 class="fw-bold mb-3"><i class="bi bi-list me-2"></i>Fee Breakdown</h6>
+            <table class="table table-sm">
+                <thead><tr><th>Fee Type</th><th>Required</th><th>Paid</th><th>Remaining</th></tr></thead>
+                <tbody>
+                    {% for f in fee_choices %}
+                    <tr>
+                        <td class="fw-medium">{{ f.fee_type.name }}</td>
+                        <td>{{ f.required|floatformat:0 }}</td>
+                        <td class="text-success">{{ f.paid|floatformat:0 }}</td>
+                        <td class="text-danger fw-bold">{{ f.remaining|floatformat:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+{% endblock %}

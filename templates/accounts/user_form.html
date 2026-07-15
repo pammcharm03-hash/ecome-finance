@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header"><h1>{{ title }}</h1></div>
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="stat-card">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">Username *</label>
+                        <input type="text" name="username" class="form-control" value="{{ user.username|default:'' }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">Role *</label>
+                        <select name="role" class="form-select" id="roleSelect">
+                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Super Admin</option>
+                            <option value="registrar" {% if user.role == 'registrar' %}selected{% endif %}>Registrar</option>
+                            <option value="accountant" {% if user.role == 'accountant' %}selected{% endif %}>Accountant</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">First Name</label>
+                        <input type="text" name="first_name" class="form-control" value="{{ user.first_name|default:'' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">Last Name</label>
+                        <input type="text" name="last_name" class="form-control" value="{{ user.last_name|default:'' }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">Email</label>
+                        <input type="email" name="email" class="form-control" value="{{ user.email|default:'' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-medium">Phone</label>
+                        <input type="text" name="phone" class="form-control" value="{{ user.phone|default:'' }}">
+                    </div>
+                </div>
+                <div class="mb-3" id="branchField">
+                    <label class="form-label fw-medium">Branch</label>
+                    <select name="branch" class="form-select">
+                        <option value="">-- Select Branch --</option>
+                        {% for b in branches %}
+                        <option value="{{ b.pk }}" {% if user.branch_id == b.pk %}selected{% endif %}>{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Password {% if user.pk %}(leave blank to keep current){% else %}*{% endif %}</label>
+                    <input type="password" name="password" class="form-control" {% if not user.pk %}required{% endif %}>
+                </div>
+                {% if user.pk %}
+                <div class="mb-3 form-check">
+                    <input type="checkbox" name="is_active" class="form-check-input" id="isActive" {% if user.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="isActive">Active</label>
+                </div>
+                {% endif %}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+                    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const roleSelect = document.getElementById('roleSelect');
+const branchField = document.getElementById('branchField');
+function toggleBranch() {
+    branchField.style.display = roleSelect.value === 'admin' ? 'none' : 'block';
+}
+roleSelect.addEventListener('change', toggleBranch);
+toggleBranch();
+</script>
+{% endblock %}

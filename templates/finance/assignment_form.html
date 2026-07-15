@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header"><h1>{{ title }}</h1></div>
+<div class="row justify-content-center"><div class="col-lg-7">
+    <div class="stat-card"><form method="post">{% csrf_token %}
+        <div class="mb-3"><label class="form-label fw-medium">Fee Type *</label><select name="fee_type" class="form-select" required>
+            <option value="">-- Select Fee Type --</option>
+            {% for ft in fee_types %}<option value="{{ ft.pk }}">{{ ft.name }}</option>{% endfor %}
+        </select></div>
+        <div class="mb-3"><label class="form-label fw-medium">Amount (RWF) *</label><input type="number" name="amount" class="form-control" min="0" step="100" required></div>
+        <div class="mb-3"><label class="form-label fw-medium">Scope *</label><select name="scope" class="form-select" id="scopeSelect" required>
+            <option value="school">Whole School</option>
+            <option value="branch">Branch</option>
+            <option value="level">Level</option>
+            <option value="class">Class</option>
+        </select></div>
+        <div class="mb-3" id="branchField" style="display:none;"><label class="form-label fw-medium">Branch</label><select name="branch" class="form-select">
+            <option value="">-- Select Branch --</option>
+            {% for b in branches %}<option value="{{ b.pk }}">{{ b.name }}</option>{% endfor %}
+        </select></div>
+        <div class="mb-3" id="levelField" style="display:none;"><label class="form-label fw-medium">Level</label><select name="level" class="form-select">
+            <option value="">-- Select Level --</option>
+            {% for l in levels %}<option value="{{ l.pk }}">{{ l.name }}</option>{% endfor %}
+        </select></div>
+        <div class="mb-3" id="classField" style="display:none;"><label class="form-label fw-medium">Class</label><select name="school_class" class="form-select">
+            <option value="">-- Select Class --</option>
+            {% for c in classes %}<option value="{{ c.pk }}">{{ c.name }} ({{ c.level.name }})</option>{% endfor %}
+        </select></div>
+        <div class="mb-3"><label class="form-label fw-medium">Academic Year *</label><select name="academic_year" class="form-select" required>
+            <option value="">-- Select Year --</option>
+            {% for y in years %}<option value="{{ y.pk }}" {% if y.is_active %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+        </select></div>
+        <div class="mb-3"><label class="form-label fw-medium">Term</label><select name="term" class="form-select">
+            <option value="">-- All Terms --</option>
+            {% for t in terms %}<option value="{{ t.pk }}">{{ t.academic_year.name }} - {{ t.name }}</option>{% endfor %}
+        </select></div>
+        <div class="d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button><a href="{% url 'finance:assignment_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+    </form></div>
+</div></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const scopeSelect = document.getElementById('scopeSelect');
+function toggleFields() {
+    const v = scopeSelect.value;
+    document.getElementById('branchField').style.display = v === 'branch' ? 'block' : 'none';
+    document.getElementById('levelField').style.display = v === 'level' ? 'block' : 'none';
+    document.getElementById('classField').style.display = v === 'class' ? 'block' : 'none';
+}
+scopeSelect.addEventListener('change', toggleFields);
+toggleFields();
+</script>
+{% endblock %}

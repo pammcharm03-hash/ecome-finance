@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header"><h1>{{ title }}</h1></div>
+<div class="row justify-content-center"><div class="col-lg-8">
+    <div class="stat-card"><form method="post">{% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-3"><label class="form-label fw-medium">Student ID</label><input type="text" name="student_id" class="form-control" value="{{ student.student_id|default:generated_student_id|default:'' }}" {% if not student.pk %}readonly{% endif %}><div class="form-text">{% if student.pk %}You can edit the code if needed.{% else %}The system will generate this automatically for new students.{% endif %}</div></div>
+            <div class="col-md-6 mb-3"><label class="form-label fw-medium">Gender</label><select name="gender" class="form-select">
+                <option value="M" {% if student.gender == 'M' %}selected{% endif %}>Male</option>
+                <option value="F" {% if student.gender == 'F' %}selected{% endif %}>Female</option>
+            </select></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3"><label class="form-label fw-medium">First Name *</label><input type="text" name="first_name" class="form-control" value="{{ student.first_name|default:'' }}" required></div>
+            <div class="col-md-6 mb-3"><label class="form-label fw-medium">Last Name *</label><input type="text" name="last_name" class="form-control" value="{{ student.last_name|default:'' }}" required></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3"><label class="form-label fw-medium">Date of Birth</label><input type="date" name="date_of_birth" class="form-control" value="{{ student.date_of_birth|date:'Y-m-d'|default:'' }}"></div>
+            <div class="col-md-6 mb-3"><label class="form-label fw-medium">Parent Phone</label><input type="text" name="parent_phone" class="form-control" value="{{ student.parent_phone|default:'' }}" placeholder="0781234567"></div>
+        </div>
+        <div class="mb-3"><label class="form-label fw-medium">Parent Name</label><input type="text" name="parent_name" class="form-control" value="{{ student.parent_name|default:'' }}"></div>
+        <div class="row">
+            <div class="col-md-4 mb-3"><label class="form-label fw-medium">Branch *</label><select name="branch" class="form-select" required>
+                <option value="">-- Select --</option>
+                {% for b in branches %}<option value="{{ b.pk }}" {% if student.branch_id == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+            </select></div>
+            <div class="col-md-4 mb-3"><label class="form-label fw-medium">Level *</label><select name="level" class="form-select" required>
+                <option value="">-- Select --</option>
+                {% for l in levels %}<option value="{{ l.pk }}" {% if student.level_id == l.pk %}selected{% endif %}>{{ l.name }}</option>{% endfor %}
+            </select></div>
+            <div class="col-md-4 mb-3"><label class="form-label fw-medium">Class *</label><select name="school_class" class="form-select" required>
+                <option value="">-- Select --</option>
+                {% for c in classes %}<option value="{{ c.pk }}" {% if student.school_class_id == c.pk %}selected{% endif %}>{{ c.name }} ({{ c.level.name }})</option>{% endfor %}
+            </select></div>
+        </div>
+        <div class="mb-3"><label class="form-label fw-medium">Academic Year</label><select name="academic_year" class="form-select">
+            <option value="">-- Select --</option>
+            {% for y in years %}<option value="{{ y.pk }}" {% if student.academic_year_id == y.pk %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+        </select></div>
+        {% if student.pk %}
+        <div class="mb-3"><label class="form-label fw-medium">Status</label><select name="status" class="form-select">
+            <option value="active" {% if student.status == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if student.status == 'inactive' %}selected{% endif %}>Inactive</option>
+            <option value="graduated" {% if student.status == 'graduated' %}selected{% endif %}>Graduated</option>
+        </select></div>
+        {% endif %}
+        <div class="d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button><a href="{% url 'students:student_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+    </form></div>
+</div></div>
+</div>
+{% endblock %}

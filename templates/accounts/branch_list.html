@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Branches - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}Branches{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header">
+    <h1><i class="bi bi-building me-2"></i>Branches</h1>
+    <div class="actions">
+        <a href="{% url 'accounts:branch_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Branch</a>
+    </div>
+</div>
+
+<div class="table-container">
+    <table class="table table-hover">
+        <thead>
+            <tr><th>Name</th><th>Code</th><th>Address</th><th>Phone</th><th>Users</th><th class="text-end">Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for b in branches %}
+            <tr>
+                <td class="fw-medium">{{ b.name }}</td>
+                <td><code>{{ b.code }}</code></td>
+                <td>{{ b.address|default:'-' }}</td>
+                <td>{{ b.phone|default:'-' }}</td>
+                <td>{{ b.users.count }}</td>
+                <td class="text-end">
+                    <a href="{% url 'accounts:branch_edit' b.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><i class="bi bi-building"></i><p>No branches yet.</p></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

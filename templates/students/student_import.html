@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Import Students - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}Import Students from Excel{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header"><h1>Import Students from Excel</h1></div>
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="stat-card">
+            <h6 class="fw-bold mb-3"><i class="bi bi-upload me-2"></i>Upload Excel File</h6>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Excel File (.xlsx)</label>
+                    <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-cloud-upload me-1"></i>Import</button>
+                    <a href="{% url 'students:student_template' %}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>Download Template</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="stat-card">
+            <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Excel Format</h6>
+            <p class="text-muted small">The Excel file must have the following columns in order:</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead><tr><th>Column</th><th>Field</th><th>Required</th></tr></thead>
+                    <tbody>
+                        <tr><td>A</td><td>Student ID</td><td>Yes</td></tr>
+                        <tr><td>B</td><td>First Name</td><td>Yes</td></tr>
+                        <tr><td>C</td><td>Last Name</td><td>Yes</td></tr>
+                        <tr><td>D</td><td>Gender (M/F)</td><td>Yes</td></tr>
+                        <tr><td>E</td><td>Date of Birth</td><td>No</td></tr>
+                        <tr><td>F</td><td>Parent Name</td><td>No</td></tr>
+                        <tr><td>G</td><td>Parent Phone</td><td>No</td></tr>
+                        <tr><td>H</td><td>Branch Code</td><td>Yes</td></tr>
+                        <tr><td>I</td><td>Level Code</td><td>Yes</td></tr>
+                        <tr><td>J</td><td>Class Name</td><td>Yes</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-info small">
+                <i class="bi bi-lightbulb me-1"></i> Branch Code and Level Code must match existing records. Download the template for a sample row.
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

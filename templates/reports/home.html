@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Reports - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}Reports & Exports{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header"><h1><i class="bi bi-file-earmark-spreadsheet me-2"></i>Reports & Exports</h1></div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="stat-card">
+            <h6 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Student Reports</h6>
+            <p class="text-muted small">Export student data to Excel.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'reports:export_students' %}" class="btn btn-outline-primary"><i class="bi bi-download me-1"></i>All Students</a>
+                {% if user.is_admin %}
+                {% for b in ALL_BRANCHES %}
+                <a href="{% url 'reports:export_students' %}?branch={{ b.pk }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>{{ b.name }}</a>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="stat-card">
+            <h6 class="fw-bold mb-3"><i class="bi bi-cash me-2"></i>Payment Reports</h6>
+            <p class="text-muted small">Export successful payments by period.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'reports:export_payments' %}?period=daily" class="btn btn-outline-primary"><i class="bi bi-download me-1"></i>Daily</a>
+                <a href="{% url 'reports:export_payments' %}?period=weekly" class="btn btn-outline-primary"><i class="bi bi-download me-1"></i>Weekly</a>
+                <a href="{% url 'reports:export_payments' %}?period=monthly" class="btn btn-outline-primary"><i class="bi bi-download me-1"></i>Monthly</a>
+                <a href="{% url 'reports:export_payments' %}?period=yearly" class="btn btn-outline-primary"><i class="bi bi-download me-1"></i>Yearly</a>
+                <a href="{% url 'reports:export_payments' %}" class="btn btn-outline-success"><i class="bi bi-download me-1"></i>All</a>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

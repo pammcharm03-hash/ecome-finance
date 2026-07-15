@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header"><h1>{{ title }}</h1></div>
+<div class="row justify-content-center"><div class="col-lg-5">
+    <div class="stat-card"><form method="post">{% csrf_token %}
+        <div class="mb-3"><label class="form-label fw-medium">Name *</label><input type="text" name="name" class="form-control" value="{{ level.name|default:'' }}" required></div>
+        <div class="mb-3"><label class="form-label fw-medium">Code *</label><input type="text" name="code" class="form-control" value="{{ level.code|default:'' }}" required></div>
+        <div class="mb-3"><label class="form-label fw-medium">Order</label><input type="number" name="order" class="form-control" value="{{ level.order|default:0 }}"></div>
+        <div class="d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button><a href="{% url 'academics:level_list' %}" class="btn btn-outline-secondary">Cancel</a></div>
+    </form></div>
+</div></div>
+</div>
+{% endblock %}

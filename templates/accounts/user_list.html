@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Users - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}Users{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header">
+    <h1><i class="bi bi-people me-2"></i>Users</h1>
+    <div class="actions">
+        <a href="{% url 'accounts:user_create' %}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add User</a>
+    </div>
+</div>
+
+<div class="table-container">
+    <table class="table table-hover">
+        <thead>
+            <tr><th>Username</th><th>Name</th><th>Role</th><th>Branch</th><th>Phone</th><th>Status</th><th class="text-end">Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td class="fw-medium">{{ u.username }}</td>
+                <td>{{ u.get_full_name|default:'-' }}</td>
+                <td><span class="badge bg-primary-soft">{{ u.get_role_display }}</span></td>
+                <td>{{ u.branch.name|default:'All Branches' }}</td>
+                <td>{{ u.phone|default:'-' }}</td>
+                <td>
+                    {% if u.is_active %}<span class="status-badge status-successful">Active</span>
+                    {% else %}<span class="status-badge status-failed">Inactive</span>{% endif %}
+                </td>
+                <td class="text-end">
+                    <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7"><div class="empty-state"><i class="bi bi-people"></i><p>No users yet.</p></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}

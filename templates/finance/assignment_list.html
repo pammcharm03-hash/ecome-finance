@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Fee Assignments - {{ SCHOOL_NAME }}{% endblock %}
+{% block page_title %}Fee Assignments{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+<div class="page-header">
+    <h1><i class="bi bi-clipboard-check me-2"></i>Fee Assignments</h1>
+    <div class="actions"><a href="{% url 'finance:assignment_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Assign Fee</a></div>
+</div>
+<div class="table-container">
+    <table class="table table-hover">
+        <thead><tr><th>Fee Type</th><th>Amount</th><th>Scope</th><th>Target</th><th>Year</th><th>Term</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+            {% for a in assignments %}
+            <tr>
+                <td class="fw-medium">{{ a.fee_type.name }}</td>
+                <td>{{ a.amount|floatformat:0 }} RWF</td>
+                <td><span class="badge bg-primary-soft">{{ a.get_scope_display }}</span></td>
+                <td>
+                    {% if a.school_class %}{{ a.school_class.name }}
+                    {% elif a.level %}{{ a.level.name }}
+                    {% elif a.branch %}{{ a.branch.name }}
+                    {% else %}Whole School{% endif %}
+                </td>
+                <td>{{ a.academic_year.name }}</td>
+                <td>{{ a.term.name|default:'-' }}</td>
+                <td class="text-end">
+                    <form method="post" action="{% url 'finance:assignment_delete' a.pk %}" class="d-inline" onsubmit="return confirm('Delete this assignment?')">
+                        {% csrf_token %}<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7"><div class="empty-state"><i class="bi bi-clipboard-check"></i><p>No fee assignments yet.</p></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+{% endblock %}
