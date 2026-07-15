@@ -4,14 +4,14 @@ Handles communication with Paypack Rwanda Mobile Money API (v1).
 
 Documentation reference: https://docs.paypack.rw
 
-Key facts about the Paypack v1 API:
-  * Auth:  POST /auth/access-token  -> {"access": "<token>", "refresh": "..."}
-  * Cashin: POST /transactions/cashin -> body is {"status": "success", "data": {...}}
-  * Status: GET  /transactions/{ref} -> body is {"status": "success", "data": {...}}
+Key facts about the Paypack API:
+  * Auth:  POST /auth/agents/authorize  -> {"access": "TOKEN", "refresh": "REFRESH_TOKEN", "expires": "..."}
+  * Cashin: POST /transactions/cashin -> body is {"amount": 50000, "number": "078xxxxxxx"}
+  * Status: GET /transactions/{ref} -> body is {"status": "success", "data": {...}}
   * Webhook: Paypack POSTs an envelope {"event": "transaction.update", "data": {...}}
             where data contains: client_transaction_id, ref, external_reference,
             status, amount, phone, timestamp.
-The responses are NESTED under "data", which is handled here.
+The responses are handled here.
 """
 import requests
 from django.conf import settings
@@ -22,12 +22,7 @@ class PaypackError(Exception):
 
 
 def _get_base_url():
-    env = getattr(settings, "PAYPACK_ENV", "sandbox")
-    return (
-        "https://api.paypack.rw/api/v1"
-        if env == "production"
-        else "https://api.sandbox.paypack.rw/api/v1"
-    )
+    return "https://payments.paypack.rw/api"
 
 
 def _get_credentials():
@@ -41,7 +36,7 @@ def _get_credentials():
 def get_access_token():
     """Get a fresh Paypack access token using client credentials."""
     client_id, client_secret = _get_credentials()
-    url = f"{_get_base_url()}/auth/access-token"
+    url = f"{_get_base_url()}/auth/agents/authorize"
     try:
         resp = requests.post(
             url,
@@ -56,7 +51,7 @@ def get_access_token():
     except ValueError as e:
         raise PaypackError(f"Invalid Paypack auth response: {e}")
 
-    token = data.get("access") or data.get("data", {}).get("access")
+    token = data.get("access")
     if not token:
         raise PaypackError("Paypack auth response did not contain an access token.")
     return token
