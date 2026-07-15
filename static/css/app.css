@@ -197,6 +197,33 @@ body {
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
 }
 
+.table-container {
+    overflow-x: auto;
+}
+
+.table {
+    min-width: 100%;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Sidebar backdrop for mobile */
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    z-index: 950;
+}
+.sidebar-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
 /* Login */
 .login-wrapper {
     min-height: 100vh;
@@ -218,10 +245,59 @@ body {
 [data-bs-theme="dark"] .login-card { background: rgba(30,41,59,0.95); }
 
 /* Mobile */
+@media (max-width: 992px) {
+    .sidebar {
+        transform: translateX(-100%);
+        position: fixed;
+        inset: 0 0 0 auto;
+        width: 260px;
+        max-width: 80%;
+        z-index: 1000;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+    }
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    .main-content {
+        margin-left: 0;
+    }
+    .topbar {
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+    }
+    .topbar-right {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+    .content-area {
+        padding: 1rem;
+    }
+    .nav-link {
+        padding: 0.75rem 0.85rem;
+    }
+    .logo-text {
+        display: none;
+    }
+    .sidebar-header {
+        justify-content: space-between;
+    }
+    .sidebar-header::after {
+        content: '';
+        display: none;
+    }
+}
+
 @media (max-width: 768px) {
-    .sidebar { transform: translateX(-100%); }
-    .sidebar.show { transform: translateX(0); }
-    .main-content { margin-left: 0; }
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .page-header .actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
 }
 
 /* Animations */

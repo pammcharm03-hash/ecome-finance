@@ -25,8 +25,14 @@
         const sidebarToggle = document.getElementById('sidebarToggle');
         const sidebar = document.getElementById('sidebar');
         if (sidebarToggle && sidebar) {
+            const backdrop = document.getElementById('sidebarBackdrop');
             sidebarToggle.addEventListener('click', function() {
                 sidebar.classList.toggle('show');
+                backdrop?.classList.toggle('show');
+            });
+            backdrop?.addEventListener('click', function() {
+                sidebar.classList.remove('show');
+                backdrop.classList.remove('show');
             });
         }
     });
