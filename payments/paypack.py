@@ -118,6 +118,8 @@ def initiate_payment(phone_number, amount, reference, description="", callback_u
 
         # Log response
         logger.info(f"PayPack Response - Status: {resp.status_code}, Body: {resp.text}")
+        body = resp.json()
+        logger.info(f"PayPack Response JSON: {body}")
 
         resp.raise_for_status()
         body = resp.json()
@@ -176,7 +178,7 @@ def get_transaction_status(ref):
     except ValueError as e:
         raise PaypackError(f"Invalid Paypack transaction response: {e}")
 
-    return body.get("data", {}) or {}
+    return body
 
 
 def parse_webhook_payload(raw_body):
