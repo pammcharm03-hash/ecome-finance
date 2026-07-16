@@ -7,16 +7,30 @@
 <div class="page-header"><h1>{{ title }}</h1></div>
 <div class="row justify-content-center"><div class="col-lg-6">
     <div class="stat-card"><form method="post">{% csrf_token %}
-        <div class="mb-3"><label class="form-label fw-medium">Class Name *</label><input type="text" name="name" class="form-control" value="{{ class.name|default:'' }}" required></div>
-        <div class="mb-3"><label class="form-label fw-medium">Code</label><input type="text" name="code" class="form-control" value="{{ class.code|default:'' }}"></div>
-        <div class="mb-3"><label class="form-label fw-medium">Level *</label><select name="level" class="form-select" required>
-            <option value="">-- Select Level --</option>
-            {% for l in levels %}<option value="{{ l.pk }}" {% if class.level_id == l.pk %}selected{% endif %}>{{ l.name }}</option>{% endfor %}
-        </select></div>
-        <div class="mb-3"><label class="form-label fw-medium">Branch</label><select name="branch" class="form-select">
-            <option value="">-- All Branches --</option>
-            {% for b in branches %}<option value="{{ b.pk }}" {% if class.branch_id == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
-        </select></div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Class Name *</label>
+            <input type="text" name="name" class="form-control" value="{{ class.name|default:form_data.name|default:'' }}" required>
+            {% if errors.name %}<div class="text-danger small mt-1">{{ errors.name }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Code</label>
+            <input type="text" name="code" class="form-control" value="{{ class.code|default:form_data.code|default:'' }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Level *</label>
+            <select name="level" class="form-select" required>
+                <option value="">-- Select Level --</option>
+                {% for l in levels %}<option value="{{ l.pk }}" {% if class.level_id == l.pk %}selected{% endif %}>{{ l.name }}</option>{% endfor %}
+            </select>
+            {% if errors.level %}<div class="text-danger small mt-1">{{ errors.level }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Branch</label>
+            <select name="branch" class="form-select">
+                <option value="">-- All Branches --</option>
+                {% for b in branches %}<option value="{{ b.pk }}" {% if class.branch_id == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+            </select>
+        </div>
         <div class="d-flex gap-2 flex-wrap"><button type="submit" class="btn btn-primary w-100 w-sm-auto"><i class="bi bi-check-lg me-1"></i>Save</button><a href="{% url 'academics:class_list' %}" class="btn btn-outline-secondary w-100 w-sm-auto">Cancel</a></div>
     </form></div>
 </div></div>

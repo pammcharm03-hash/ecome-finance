@@ -64,15 +64,30 @@ def class_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         code = request.POST.get("code", "").strip()
-        level_id = request.POST.get("level")
-        branch_id = request.POST.get("branch")
-        level = Level.objects.filter(pk=level_id).first()
-        branch = Branch.objects.filter(pk=branch_id).first()
-        if name and level:
-            SchoolClass.objects.create(name=name, code=code, level=level, branch=branch)
-            messages.success(request, "Class created.")
-            return redirect("academics:class_list")
-        messages.error(request, "Name and level required.")
+        level_id = request.POST.get("level", "").strip()
+        branch_id = request.POST.get("branch", "").strip()
+
+        errors = {}
+        if not name:
+            errors["name"] = "Class name is required."
+        if not level_id:
+            errors["level"] = "Level is required."
+
+        level = Level.objects.filter(pk=level_id).first() if level_id else None
+        branch = Branch.objects.filter(pk=branch_id).first() if branch_id else None
+
+        if errors:
+            return render(request, "academics/class_form.html", {
+                "levels": levels,
+                "branches": branches,
+                "title": "Add Class",
+                "errors": errors,
+                "form_data": request.POST,
+            })
+
+        SchoolClass.objects.create(name=name, code=code, level=level, branch=branch)
+        messages.success(request, "Class created.")
+        return redirect("academics:class_list")
     return render(request, "academics/class_form.html", {"levels": levels, "branches": branches, "title": "Add Class"})
 
 
@@ -83,10 +98,34 @@ def class_edit(request, pk):
     levels = Level.objects.all()
     branches = Branch.objects.all()
     if request.method == "POST":
-        school_class.name = request.POST.get("name", school_class.name).strip()
-        school_class.code = request.POST.get("code", school_class.code).strip()
-        school_class.level = Level.objects.filter(pk=request.POST.get("level")).first() or school_class.level
-        school_class.branch = Branch.objects.filter(pk=request.POST.get("branch")).first()
+        name = request.POST.get("name", "").strip()
+        code = request.POST.get("code", "").strip()
+        level_id = request.POST.get("level", "").strip()
+        branch_id = request.POST.get("branch", "").strip()
+
+        errors = {}
+        if not name:
+            errors["name"] = "Class name is required."
+        if not level_id:
+            errors["level"] = "Level is required."
+
+        level = Level.objects.filter(pk=level_id).first() if level_id else None
+        branch = Branch.objects.filter(pk=branch_id).first() if branch_id else None
+
+        if errors:
+            return render(request, "academics/class_form.html", {
+                "class": school_class,
+                "levels": levels,
+                "branches": branches,
+                "title": "Edit Class",
+                "errors": errors,
+                "form_data": request.POST,
+            })
+
+        school_class.name = name
+        school_class.code = code
+        school_class.level = level or school_class.level
+        school_class.branch = branch
         school_class.save()
         messages.success(request, "Class updated.")
         return redirect("academics:class_list")
