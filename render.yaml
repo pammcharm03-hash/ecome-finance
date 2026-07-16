@@ -5,6 +5,3 @@ services:
     buildCommand: bash build.sh
     startCommand: gunicorn ecome_finance.wsgi --log-file -
     plan: free
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
