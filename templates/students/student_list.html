@@ -16,31 +16,31 @@
 
 <div class="stat-card mb-3">
     <form method="get" class="row g-2">
-        <div class="col-md-4">
+        <div class="col-12 col-md-4">
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input type="text" name="q" class="form-control" placeholder="Search name, ID, phone..." value="{{ q|default:'' }}">
             </div>
         </div>
         {% if user.is_admin %}
-        <div class="col-md-3">
+        <div class="col-12 col-md-3">
             <select name="branch" class="form-select">
                 <option value="">All Branches</option>
                 {% for b in branches %}<option value="{{ b.pk }}" {% if request.GET.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
             </select>
         </div>
         {% endif %}
-        <div class="col-md-3">
+        <div class="col-12 col-md-3">
             <select name="class" class="form-select">
                 <option value="">All Classes</option>
                 {% for c in classes %}<option value="{{ c.pk }}" {% if request.GET.class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+        <div class="col-12 col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
     </form>
 </div>
 
-<div class="table-container">
+<div class="table-container table-responsive">
     <table class="table table-hover">
         <thead><tr><th>Student ID</th><th>Name</th><th>Gender</th><th>Class</th><th>Level</th><th>Branch</th><th>Parent Phone</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
         <tbody>
@@ -55,9 +55,11 @@
                 <td>{{ s.parent_phone|default:'-' }}</td>
                 <td><span class="status-badge status-successful">{{ s.status }}</span></td>
                 <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end flex-wrap">
                     <a href="{% url 'students:student_detail' s.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
                     <a href="{% url 'students:student_edit' s.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
                     <a href="{% url 'students:student_delete' s.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    </div>
                 </td>
             </tr>
             {% empty %}

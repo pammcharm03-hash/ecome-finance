@@ -8,13 +8,13 @@
 
 <div class="stat-card mb-3">
     <form method="get" class="row g-2">
-        <div class="col-md-5">
+        <div class="col-12 col-md-5">
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input type="text" name="q" class="form-control" placeholder="Search receipt, student..." value="{{ q|default:'' }}">
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-12 col-md-4">
             <select name="status" class="form-select">
                 <option value="">All Statuses</option>
                 <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
@@ -23,11 +23,11 @@
                 <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
             </select>
         </div>
-        <div class="col-md-3"><button class="btn btn-primary w-100">Filter</button></div>
+        <div class="col-12 col-md-3"><button class="btn btn-primary w-100">Filter</button></div>
     </form>
 </div>
 
-<div class="table-container">
+<div class="table-container table-responsive">
     <table class="table table-hover">
         <thead><tr><th>Receipt</th><th>Student</th><th>Fee Type</th><th>Amount</th><th>Phone</th><th>Accountant</th><th>Status</th><th>Date</th><th class="text-end">Actions</th></tr></thead>
         <tbody>
@@ -48,11 +48,13 @@
                 <td><span class="status-badge status-{{ p.status }}">{{ p.get_status_display }}</span></td>
                 <td>{{ p.created_at|date:'M d, H:i' }}</td>
                 <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end flex-wrap">
                     {% if p.status == 'successful' %}
                     <a href="{% url 'payments:receipt_view' p.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-printer"></i></a>
                     {% else %}
                     <a href="{% url 'payments:payment_status' p.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
                     {% endif %}
+                    </div>
                 </td>
             </tr>
             {% empty %}

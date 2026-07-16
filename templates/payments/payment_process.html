@@ -44,11 +44,11 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-12 col-md-6 mb-3">
                         <label class="form-label fw-medium">Amount (RWF) *</label>
                         <input type="number" name="amount" class="form-control form-control-lg" min="100" step="100" required placeholder="0">
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-12 col-md-6 mb-3">
                         <label class="form-label fw-medium">Payer Phone *</label>
                         <input type="text" name="phone" class="form-control form-control-lg" value="{{ student.parent_phone|default:'' }}" required placeholder="0781234567">
                     </div>
@@ -67,6 +67,7 @@
         {% if fee_choices %}
         <div class="stat-card mt-3">
             <h6 class="fw-bold mb-3"><i class="bi bi-list me-2"></i>Fee Breakdown</h6>
+            <div class="table-responsive">
             <table class="table table-sm">
                 <thead><tr><th>Fee Type</th><th>Required</th><th>Paid</th><th>Remaining</th></tr></thead>
                 <tbody>
@@ -80,6 +81,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         {% endif %}
     </div>

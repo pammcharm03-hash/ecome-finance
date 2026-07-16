@@ -11,7 +11,7 @@
     </div>
 </div>
 
-<div class="table-container">
+<div class="table-container table-responsive">
     <table class="table table-hover">
         <thead>
             <tr><th>Username</th><th>Name</th><th>Role</th><th>Branch</th><th>Phone</th><th>Status</th><th class="text-end">Actions</th></tr>
@@ -29,10 +29,12 @@
                     {% else %}<span class="status-badge status-failed">Inactive</span>{% endif %}
                 </td>
                 <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end flex-wrap">
                     <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                     {% if u.username != 'admin' %}
                     <a href="{% url 'accounts:user_delete' u.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                     {% endif %}
+                    </div>
                 </td>
             </tr>
             {% empty %}

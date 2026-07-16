@@ -11,7 +11,7 @@
     </div>
 </div>
 
-<div class="table-container">
+<div class="table-container table-responsive">
     <table class="table table-hover">
         <thead>
             <tr><th>Name</th><th>Code</th><th>Address</th><th>Phone</th><th>Users</th><th class="text-end">Actions</th></tr>
@@ -25,8 +25,10 @@
                 <td>{{ b.phone|default:'-' }}</td>
                 <td>{{ b.users.count }}</td>
                 <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end flex-wrap">
                     <a href="{% url 'accounts:branch_edit' b.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                     <a href="{% url 'accounts:branch_delete' b.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    </div>
                 </td>
             </tr>
             {% empty %}

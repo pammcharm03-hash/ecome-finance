@@ -8,15 +8,17 @@
     <h1><i class="bi bi-layers me-2"></i>Academic Levels</h1>
     <div class="actions"><a href="{% url 'academics:level_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Level</a></div>
 </div>
-<div class="table-container">
+<div class="table-container table-responsive">
     <table class="table table-hover">
         <thead><tr><th>Name</th><th>Code</th><th>Order</th><th>Classes</th><th class="text-end">Actions</th></tr></thead>
         <tbody>
             {% for l in levels %}
             <tr><td class="fw-medium">{{ l.name }}</td><td><code>{{ l.code }}</code></td><td>{{ l.order }}</td><td>{{ l.classes.count }}</td>
                 <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end flex-wrap">
                     <a href="{% url 'academics:level_edit' l.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                     <a href="{% url 'academics:level_delete' l.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    </div>
                 </td></tr>
             {% empty %}
             <tr><td colspan="5"><div class="empty-state"><i class="bi bi-layers"></i><p>No levels yet.</p></div></td></tr>

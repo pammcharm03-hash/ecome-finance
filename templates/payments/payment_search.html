@@ -8,10 +8,10 @@
 
 <div class="stat-card mb-3">
     <form method="get">
-        <div class="input-group">
+        <div class="input-group flex-column flex-sm-row">
             <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input type="text" name="q" class="form-control form-control-lg" placeholder="Search by name, student ID, or parent phone..." value="{{ q|default:'' }}" autofocus>
-            <button class="btn btn-primary px-4">Search</button>
+            <button class="btn btn-primary px-4 mt-2 mt-sm-0">Search</button>
         </div>
     </form>
 </div>
@@ -28,7 +28,7 @@
                 <td>{{ s.school_class.name }}</td>
                 <td>{{ s.branch.name }}</td>
                 <td>{{ s.parent_phone|default:'-' }}</td>
-                <td class="text-end"><a href="{% url 'payments:payment_process' s.pk %}" class="btn btn-sm btn-primary"><i class="bi bi-cash me-1"></i>Collect</a></td>
+                <td class="text-end"><a href="{% url 'payments:payment_process' s.pk %}" class="btn btn-sm btn-primary w-100 w-sm-auto"><i class="bi bi-cash me-1"></i>Collect</a></td>
             </tr>
             {% empty %}
             <tr><td colspan="6"><div class="empty-state"><i class="bi bi-search"></i><p>No students found for "{{ q }}".</p></div></td></tr>
