@@ -111,7 +111,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PAYPACK_CLIENT_ID = config('PAYPACK_CLIENT_ID', default='cd948e08-8025-11f1-846c-deadd43720af')
 PAYPACK_CLIENT_SECRET = config('PAYPACK_CLIENT_SECRET', default='f37c183d25b31ced1c9f0d72637f6704da39a3ee5e6b4b0d3255bfef95601890afd80709')
 PAYPACK_ENV = config('PAYPACK_ENV', default='sandbox')
-PAYPACK_WEBHOOK_URL = config('PAYPACK_WEBHOOK_URL', default='https://ecome-finance-1.onrender.com/payments/webhook/')
+PAYPACK_WEBHOOK_URL = config('PAYPACK_WEBHOOK_URL', default='https://ecome-finance-2.onrender.com/payments/webhook/')
 
 # School info
 SCHOOL_NAME = 'ECOME Finance'
