@@ -58,16 +58,6 @@
             }
         });
 
-        // Close sidebar when clicking a nav link on mobile
-        const navLinks = sidebar?.querySelectorAll('.nav-link');
-        navLinks?.forEach(link => {
-            link.addEventListener('click', function() {
-                if (window.innerWidth < 992) {
-                    closeSidebarFn();
-                }
-            });
-        });
-
         // Close sidebar on window resize to desktop
         window.addEventListener('resize', function() {
             if (window.innerWidth >= 992) {
