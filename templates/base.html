@@ -15,13 +15,16 @@
 {% if user and user.is_authenticated %}
 <div class="layout-wrapper">
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
         <div class="sidebar-header">
             <div class="logo-icon"><i class="bi bi-wallet2"></i></div>
             <div class="logo-text">
                 <span class="logo-title">ECOME</span>
                 <span class="logo-subtitle">Finance</span>
             </div>
+            <button class="close-sidebar" id="closeSidebar" aria-label="Close menu">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
 
         <nav class="sidebar-nav">
@@ -111,7 +114,7 @@
     <!-- Main content -->
     <div class="main-content">
         <header class="topbar">
-            <button class="btn btn-link sidebar-toggle d-md-none" id="sidebarToggle">
+            <button class="btn btn-link sidebar-toggle d-lg-none" id="sidebarToggle" aria-label="Open menu" aria-expanded="false">
                 <i class="bi bi-list fs-4"></i>
             </button>
             <div class="topbar-title">

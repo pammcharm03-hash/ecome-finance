@@ -23,17 +23,56 @@
 
         // Sidebar toggle on mobile
         const sidebarToggle = document.getElementById('sidebarToggle');
+        const closeSidebar = document.getElementById('closeSidebar');
         const sidebar = document.getElementById('sidebar');
-        if (sidebarToggle && sidebar) {
-            const backdrop = document.getElementById('sidebarBackdrop');
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('show');
-                backdrop?.classList.toggle('show');
-            });
-            backdrop?.addEventListener('click', function() {
-                sidebar.classList.remove('show');
-                backdrop.classList.remove('show');
-            });
+        const backdrop = document.getElementById('sidebarBackdrop');
+        
+        function openSidebar() {
+            sidebar.classList.add('show');
+            backdrop?.classList.add('show');
+            document.body.classList.add('sidebar-open');
+            sidebarToggle?.setAttribute('aria-expanded', 'true');
         }
+        
+        function closeSidebarFn() {
+            sidebar.classList.remove('show');
+            backdrop?.classList.remove('show');
+            document.body.classList.remove('sidebar-open');
+            sidebarToggle?.setAttribute('aria-expanded', 'false');
+        }
+        
+        if (sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener('click', openSidebar);
+        }
+        
+        if (closeSidebar) {
+            closeSidebar.addEventListener('click', closeSidebarFn);
+        }
+        
+        backdrop?.addEventListener('click', closeSidebarFn);
+
+        // Close sidebar on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && sidebar?.classList.contains('show')) {
+                closeSidebarFn();
+            }
+        });
+
+        // Close sidebar when clicking a nav link on mobile
+        const navLinks = sidebar?.querySelectorAll('.nav-link');
+        navLinks?.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 992) {
+                    closeSidebarFn();
+                }
+            });
+        });
+
+        // Close sidebar on window resize to desktop
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 992) {
+                closeSidebarFn();
+            }
+        });
     });
 })();
