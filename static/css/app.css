@@ -345,6 +345,10 @@ body {
     .topbar-title h5 { font-size: 1rem; }
 }
 
+/* Chart containers */
+.chart-container { position: relative; }
+canvas { max-width: 100%; }
+
 /* Quick action cards (dashboard links) */
 .quick-card {
     display: flex;

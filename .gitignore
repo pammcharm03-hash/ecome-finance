@@ -18,3 +18,7 @@ env/
 
 # Build / cache
 staticfiles/
+
+# Database
+*.sqlite3
+db.sqlite3

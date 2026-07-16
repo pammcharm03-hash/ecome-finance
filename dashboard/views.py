@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from django.db.models import Sum, Count, Q
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -8,6 +9,12 @@ from accounts.models import Branch, User
 from students.models import Student
 from payments.models import Payment
 from finance.models import FeeType
+
+
+def _json_default(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 
 def _filter_by_branch(qs, user):
@@ -94,9 +101,9 @@ def admin_dashboard(request):
         "by_fee_type": list(by_fee_type),
         "by_branch": list(by_branch),
         "by_class": list(by_class),
-        "fee_data_json": json.dumps(list(by_fee_type), ensure_ascii=False),
-        "branch_data_json": json.dumps(list(by_branch), ensure_ascii=False),
-        "class_data_json": json.dumps(list(by_class), ensure_ascii=False),
+        "fee_data_json": json.dumps(list(by_fee_type), ensure_ascii=False, default=_json_default),
+        "branch_data_json": json.dumps(list(by_branch), ensure_ascii=False, default=_json_default),
+        "class_data_json": json.dumps(list(by_class), ensure_ascii=False, default=_json_default),
         "recent": recent,
         "branches": Branch.objects.all(),
         "total_users": User.objects.count(),

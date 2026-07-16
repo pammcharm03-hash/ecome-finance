@@ -103,58 +103,78 @@
 
 <!-- Payment status cards -->
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-label">Total Payments</div>
-            <div class="stat-value fs-4">{{ total_payments }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-label text-success">Successful</div>
-            <div class="stat-value fs-4 text-success">{{ successful }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-label text-warning">Pending</div>
-            <div class="stat-value fs-4 text-warning">{{ pending }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-label text-danger">Failed</div>
-            <div class="stat-value fs-4 text-danger">{{ failed }}</div>
+    <div class="col-12 col-xl-4">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Total Payments</div>
+                    <div class="stat-value fs-4">{{ total_payments }}</div>
+                </div>
+                <div class="stat-icon bg-primary-soft"><i class="bi bi-receipt"></i></div>
+            </div>
+            <div class="d-flex gap-3 mt-3">
+                <div><span class="text-success fw-bold">{{ successful }}</span> <span class="text-muted small">Successful</span></div>
+                <div><span class="text-warning fw-bold">{{ pending }}</span> <span class="text-muted small">Pending</span></div>
+                <div><span class="text-danger fw-bold">{{ failed }}</span> <span class="text-muted small">Failed</span></div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="row g-3">
-    <!-- Revenue by Fee Type Chart -->
-    <div class="col-lg-6">
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-4">
         <div class="stat-card h-100">
             <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart me-2"></i>Revenue by Fee Type</h6>
-            <canvas id="feeTypeChart" height="200"></canvas>
+            <div style="height: 260px; position: relative;">
+                <canvas id="feeTypeChart"></canvas>
+            </div>
+            <div id="feeTypeLegend" class="mt-3"></div>
         </div>
     </div>
 
-    <!-- Revenue by Branch Chart -->
     {% if by_branch %}
-    <div class="col-lg-6">
+    <div class="col-12 col-xl-4">
         <div class="stat-card h-100">
             <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2"></i>Revenue by Branch</h6>
-            <canvas id="branchChart" height="200"></canvas>
+            <div style="height: 260px; position: relative;">
+                <canvas id="branchChart"></canvas>
+            </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- Revenue by Class -->
-    <div class="col-lg-6">
+    <div class="col-12 col-xl-4">
         <div class="stat-card h-100">
             <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-line me-2"></i>Revenue by Class (Top 10)</h6>
-            <canvas id="classChart" height="200"></canvas>
+            <div style="height: 260px; position: relative;">
+                <canvas id="classChart"></canvas>
+            </div>
         </div>
     </div>
+</div>
+
+{% if today_revenue or week_revenue or month_revenue %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card border-start border-4 border-primary">
+            <div class="stat-label">Today's Revenue</div>
+            <div class="stat-value">{{ today_revenue|floatformat:0 }} <span class="fs-6 text-muted fw-normal">RWF</span></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card border-start border-4 border-success">
+            <div class="stat-label">This Week</div>
+            <div class="stat-value">{{ week_revenue|floatformat:0 }} <span class="fs-6 text-muted fw-normal">RWF</span></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card border-start border-4 border-warning">
+            <div class="stat-label">This Month</div>
+            <div class="stat-value">{{ month_revenue|floatformat:0 }} <span class="fs-6 text-muted fw-normal">RWF</span></div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
     <!-- Recent Transactions -->
     <div class="col-12">
@@ -210,6 +230,7 @@
 const feeData = JSON.parse('{{ fee_data_json|escapejs }}');
 const feeLabels = feeData.map(d => d['fee_type__name'] || 'Unknown');
 const feeValues = feeData.map(d => d.total || 0);
+const feeColors = ['#0d6efd', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#059669', '#6366f1', '#ec4899'];
 
 new Chart(document.getElementById('feeTypeChart'), {
     type: 'doughnut',
@@ -217,10 +238,41 @@ new Chart(document.getElementById('feeTypeChart'), {
         labels: feeLabels,
         datasets: [{
             data: feeValues,
-            backgroundColor: ['#0d6efd', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777'],
+            backgroundColor: feeColors,
+            borderWidth: 2,
+            borderColor: '#fff',
+            hoverOffset: 8
         }]
     },
-    options: { responsive: true, maintainAspectRatio: false }
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                        return context.label + ': ' + context.parsed.toLocaleString() + ' RWF (' + pct + '%)';
+                    }
+                }
+            }
+        }
+    },
+    plugins: [{
+        id: 'customDoughnutLegend',
+        afterUpdate(chart) {
+            const legend = document.getElementById('feeTypeLegend');
+            if (!legend) return;
+            const items = chart.data.labels.map((label, i) => {
+                const color = chart.data.datasets[0].backgroundColor[i];
+                return '<div class="d-flex align-items-center mb-1 small"><span style="width:12px;height:12px;border-radius:3px;background:' + color + ';margin-right:8px;flex-shrink:0;"></span><span class="text-truncate" style="max-width:160px;">' + label + '</span></div>';
+            });
+            legend.innerHTML = '<div class="row g-2">' + items.join('') + '</div>';
+        }
+    }]
 });
 
 {% if by_branch %}
@@ -231,9 +283,38 @@ new Chart(document.getElementById('branchChart'), {
     type: 'bar',
     data: {
         labels: branchLabels,
-        datasets: [{ label: 'Revenue (RWF)', data: branchValues, backgroundColor: '#0d6efd' }]
+        datasets: [{
+            label: 'Revenue (RWF)',
+            data: branchValues,
+            backgroundColor: '#0d6efd',
+            borderRadius: 6,
+            barThickness: 32
+        }]
     },
-    options: { responsive: true, maintainAspectRatio: false }
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { maxRotation: 45, font: { size: 11 } }
+            },
+            y: {
+                grid: { color: '#e2e8f0' },
+                ticks: {
+                    callback: function(value) {
+                        if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                        if (value >= 1000) return (value / 1000).toFixed(0) + 'K';
+                        return value;
+                    },
+                    font: { size: 11 }
+                }
+            }
+        }
+    }
 });
 {% endif %}
 
@@ -244,9 +325,39 @@ new Chart(document.getElementById('classChart'), {
     type: 'bar',
     data: {
         labels: classLabels,
-        datasets: [{ label: 'Revenue (RWF)', data: classValues, backgroundColor: '#16a34a' }]
+        datasets: [{
+            label: 'Revenue (RWF)',
+            data: classValues,
+            backgroundColor: '#16a34a',
+            borderRadius: 6,
+            barThickness: 22
+        }]
     },
-    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: {
+                grid: { color: '#e2e8f0' },
+                ticks: {
+                    callback: function(value) {
+                        if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                        if (value >= 1000) return (value / 1000).toFixed(0) + 'K';
+                        return value;
+                    },
+                    font: { size: 11 }
+                }
+            },
+            y: {
+                grid: { display: false },
+                ticks: { font: { size: 11 } }
+            }
+        }
+    }
 });
 </script>
 {% endblock %}
