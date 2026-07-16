@@ -9,12 +9,18 @@
     <div class="stat-card"><form method="post">{% csrf_token %}
         <div class="mb-3">
             <label class="form-label fw-medium">Class Name *</label>
-            <input type="text" name="name" class="form-control" value="{{ class.name|default:form_data.name|default:'' }}" required>
+            {% with name_val=class.name|default:"" %}
+                {% if form_data %}{% with name_val=form_data.name|default:name_val %}{% endwith %}{% endif %}
+                <input type="text" name="name" class="form-control" value="{{ name_val }}" required>
+            {% endwith %}
             {% if errors.name %}<div class="text-danger small mt-1">{{ errors.name }}</div>{% endif %}
         </div>
         <div class="mb-3">
             <label class="form-label fw-medium">Code</label>
-            <input type="text" name="code" class="form-control" value="{{ class.code|default:form_data.code|default:'' }}">
+            {% with code_val=class.code|default:"" %}
+                {% if form_data %}{% with code_val=form_data.code|default:code_val %}{% endwith %}{% endif %}
+                <input type="text" name="code" class="form-control" value="{{ code_val }}">
+            {% endwith %}
         </div>
         <div class="mb-3">
             <label class="form-label fw-medium">Level *</label>

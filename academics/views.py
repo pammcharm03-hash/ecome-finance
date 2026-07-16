@@ -88,7 +88,7 @@ def class_create(request):
         SchoolClass.objects.create(name=name, code=code, level=level, branch=branch)
         messages.success(request, "Class created.")
         return redirect("academics:class_list")
-    return render(request, "academics/class_form.html", {"levels": levels, "branches": branches, "title": "Add Class"})
+    return render(request, "academics/class_form.html", {"levels": levels, "branches": branches, "title": "Add Class", "errors": {}, "form_data": {}})
 
 
 @login_required
@@ -129,7 +129,7 @@ def class_edit(request, pk):
         school_class.save()
         messages.success(request, "Class updated.")
         return redirect("academics:class_list")
-    return render(request, "academics/class_form.html", {"class": school_class, "levels": levels, "branches": branches, "title": "Edit Class"})
+    return render(request, "academics/class_form.html", {"class": school_class, "levels": levels, "branches": branches, "title": "Edit Class", "errors": {}, "form_data": {}})
 
 
 # --- Academic Years ---
