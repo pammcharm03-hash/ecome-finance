@@ -1,6 +1,0 @@
-﻿services:
-  - type: web
-    name: ecome-finance
-    runtime: python
-    startCommand: python manage.py migrate --noinput && gunicorn ecome_finance.wsgi --log-file -
-    plan: free
