@@ -1,6 +1,7 @@
 import json
 import uuid
 import re
+import logging
 from decimal import Decimal, InvalidOperation
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -18,9 +19,9 @@ from payments.models import Payment, AuditLog
 from payments.paypack import (
     initiate_payment,
     parse_webhook_payload,
-    get_transaction_status,
-    PaypackError,
 )
+
+logger = logging.getLogger(__name__)
 from django.conf import settings
 
 
@@ -339,7 +340,10 @@ def webhook(request):
 
     payload = parse_webhook_payload(request.body)
     if not payload:
+        logger.warning("Webhook received invalid JSON payload")
         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    logger.info(f"Webhook received: event={payload.get('event')}, status={payload.get('status')}, ref={payload.get('ref')}, external_ref={payload.get('external_reference')}")
 
     status = payload.get("status", "")
     ref = payload.get("ref", "")
@@ -360,10 +364,12 @@ def webhook(request):
             break
 
     if not payment:
+        logger.warning(f"Webhook payment not found for candidates: external_ref={external_ref}, ref={ref}, client_transaction_id={client_transaction_id}")
         return JsonResponse({"status": "error", "message": "Payment not found"}, status=404)
 
     # Prevent double processing
     if payment.status == Payment.Status.SUCCESSFUL:
+        logger.info(f"Webhook ignored: payment {payment.receipt_number} already successful")
         return JsonResponse({"status": "ok", "message": "Already processed"})
 
     if status in ("success", "successful", "completed"):
@@ -372,6 +378,8 @@ def webhook(request):
         payment.paypack_ref = ref or payment.paypack_ref
         payment.completed_at = timezone.now()
         payment.save()
+
+        logger.info(f"Webhook marked payment {payment.receipt_number} as successful")
 
         AuditLog.objects.create(
             user=payment.accountant, action="Payment Successful",
@@ -383,6 +391,8 @@ def webhook(request):
         payment.failure_reason = "Payment declined or failed via Paypack"
         payment.save()
 
+        logger.info(f"Webhook marked payment {payment.receipt_number} as failed")
+
         AuditLog.objects.create(
             user=payment.accountant, action="Payment Failed",
             detail=f"Payment {payment.receipt_number} failed - {payment.failure_reason}",
@@ -390,6 +400,7 @@ def webhook(request):
         )
     else:
         # pending or unknown: leave as pending, just acknowledge receipt.
+        logger.info(f"Webhook ignored status '{status}' for payment {payment.receipt_number}")
         return JsonResponse({"status": "ok", "message": f"Ignored status: {status}"})
 
     return JsonResponse({"status": "ok"})
