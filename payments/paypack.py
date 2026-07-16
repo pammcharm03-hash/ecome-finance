@@ -163,7 +163,7 @@ def get_transaction_status(ref):
     """
     try:
         token = get_access_token()
-        url = f"{_get_base_url()}/transactions/{ref}"
+        url = f"{_get_base_url()}/transactions/find/{ref}"
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
