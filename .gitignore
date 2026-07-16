@@ -22,3 +22,11 @@ staticfiles/
 # Database
 *.sqlite3
 db.sqlite3
+
+# Deployment files (local only)
+Procfile
+fly.toml
+Dockerfile
+.dockerignore
+build.sh
+render.yaml
