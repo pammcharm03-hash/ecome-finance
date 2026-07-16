@@ -289,7 +289,11 @@ def payment_verify(request, pk):
         else:
             messages.info(request, "Payment is still pending on Paypack.")
     except PaypackError as e:
-        messages.error(request, f"Could not verify payment: {e}")
+        error_msg = str(e)
+        if "404" in error_msg or "Not Found" in error_msg:
+            messages.warning(request, "Paypack status lookup returned 404. The transaction may still be processing. Please wait for the webhook confirmation or check your Paypack dashboard.")
+        else:
+            messages.error(request, f"Could not verify payment: {e}")
 
     return redirect("payments:payment_status", payment.pk)
 
