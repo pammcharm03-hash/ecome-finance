@@ -90,7 +90,7 @@ def export_payments(request):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Payments"
-    headers = ["Receipt No", "Student ID", "Student Name", "Fee Type", "Amount", "Phone", "Accountant", "Branch", "Date", "Paypack Ref"]
+    headers = ["Receipt No", "Student ID", "Student Name", "Fee Type", "Amount", "Phone", "Accountant", "Branch", "Date", "HDEV Ref"]
     ws.append(headers)
     for col in range(1, len(headers) + 1):
         ws.cell(row=1, column=col).font = openpyxl.styles.Font(bold=True)

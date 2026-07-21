@@ -20,6 +20,7 @@ from payments.paypack import (
     initiate_payment,
     parse_webhook_payload,
 )
+from payments.paypack import PaymentGatewayError as PaypackError
 
 logger = logging.getLogger(__name__)
 from django.conf import settings
@@ -171,9 +172,9 @@ def payment_process(request, student_pk):
             branch=student.branch,
         )
 
-        # Try to call Paypack
+        # Try to call HDEV
         try:
-            callback_url = getattr(settings, "PAYPACK_WEBHOOK_URL", None)
+            callback_url = getattr(settings, "HDEV_WEBHOOK_URL", None)
             
             # Prepare metadata from database for tracking
             metadata = {
@@ -258,7 +259,7 @@ def payment_status(request, pk):
 
 @login_required
 def payment_verify(request, pk):
-    """Manually poll Paypack for the latest transaction status (fallback to webhook)."""
+    """Manually poll HDEV for the latest transaction status (fallback to webhook)."""
     payment = get_object_or_404(Payment, pk=pk)
     if not request.user.is_admin and request.user.branch_id != payment.branch_id:
         messages.error(request, "Access denied.")
@@ -283,15 +284,15 @@ def payment_verify(request, pk):
             messages.success(request, "Payment confirmed as successful.")
         elif status in ("failed", "error", "declined", "cancelled", "canceled"):
             payment.status = Payment.Status.FAILED
-            payment.failure_reason = "Payment declined or failed via Paypack"
+            payment.failure_reason = "Payment declined or failed via HDEV"
             payment.save()
             messages.warning(request, "Payment was not successful.")
         else:
-            messages.info(request, "Payment is still pending on Paypack.")
+            messages.info(request, "Payment is still pending on HDEV.")
     except PaypackError as e:
         error_msg = str(e)
         if "404" in error_msg or "Not Found" in error_msg:
-            messages.warning(request, "Paypack status lookup returned 404. The transaction may still be processing. Please wait for the webhook confirmation or check your Paypack dashboard.")
+            messages.warning(request, "HDEV status lookup returned 404. The transaction may still be processing. Please wait for the webhook confirmation or check your HDEV dashboard.")
         else:
             messages.error(request, f"Could not verify payment: {e}")
 
@@ -338,7 +339,7 @@ def receipt_view(request, pk):
 
 @csrf_exempt
 def webhook(request):
-    """Paypack webhook endpoint for payment notifications."""
+    """HDEV webhook endpoint for payment notifications."""
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
@@ -355,7 +356,7 @@ def webhook(request):
     client_transaction_id = payload.get("client_transaction_id", "")
 
     # Find payment by the reference we originally sent (receipt number) or by
-    # Paypack's internal transaction id.
+    # HDEV's internal transaction id.
     payment = None
     for candidate in (external_ref, ref, client_transaction_id):
         if not candidate:
@@ -392,7 +393,7 @@ def webhook(request):
         )
     elif status in ("failed", "error", "declined", "cancelled", "canceled"):
         payment.status = Payment.Status.FAILED
-        payment.failure_reason = "Payment declined or failed via Paypack"
+        payment.failure_reason = "Payment declined or failed via HDEV"
         payment.save()
 
         logger.info(f"Webhook marked payment {payment.receipt_number} as failed")

@@ -1,19 +1,16 @@
-
 """
-Paypack API service layer.
-Handles communication with Paypack Rwanda Mobile Money API (v1).
+HDEV Payment Gateway service layer.
+Handles communication with HDEV Payment API.
 
-Documentation reference: https://docs.paypack.rw
+Documentation reference: Provided by user (HDEV PAYMENT GATEWAY)
 
-Key facts about the Paypack API:
-  * Auth:  POST /auth/agents/authorize  -> {"access": "TOKEN", "refresh": "REFRESH_TOKEN", "expires": "..."}
-  * Cashin: POST /transactions/cashin -> body is {"amount": 50000, "number": "078xxxxxxx"}
-  * Status: GET /transactions/{ref} -> body is {"status": "success", "data": {...}}
-  * Webhook: Paypack POSTs an envelope {"event": "transaction.update", "data": {...}}
-            where data contains: client_transaction_id, ref, external_reference,
-            status, amount, phone, timestamp.
-The responses are handled here.
+Key facts about the HDEV API:
+  * Base URL: https://payment.hdevtech.cloud/api_pay/api/{api_id}/{api_key}
+  * Initiate: POST with ref=pay, tel, tx_ref, amount, link
+  * Query: POST with ref=read, tx_ref
+  * Webhook: HDEV POSTs to the callback URL (link) with transaction result
 """
+
 import uuid
 import logging
 import requests
@@ -22,58 +19,30 @@ from django.conf import settings
 logger = logging.getLogger('payments')
 
 
-class PaypackError(Exception):
+class PaymentGatewayError(Exception):
     pass
 
 
 def _get_base_url():
-    return "https://payments.paypack.rw/api"
-
-
-def _get_credentials():
-    client_id = getattr(settings, "PAYPACK_CLIENT_ID", "")
-    client_secret = getattr(settings, "PAYPACK_CLIENT_SECRET", "")
-    if not client_id or not client_secret:
-        raise PaypackError("Paypack credentials are not configured.")
-    return client_id, client_secret
-
-
-def get_access_token():
-    """Get a fresh Paypack access token using client credentials."""
-    client_id, client_secret = _get_credentials()
-    url = f"{_get_base_url()}/auth/agents/authorize"
-    try:
-        resp = requests.post(
-            url,
-            json={"client_id": client_id, "client_secret": client_secret},
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except requests.RequestException as e:
-        raise PaypackError(f"Failed to get Paypack access token: {e}")
-    except ValueError as e:
-        raise PaypackError(f"Invalid Paypack auth response: {e}")
-
-    token = data.get("access")
-    if not token:
-        raise PaypackError("Paypack auth response did not contain an access token.")
-    return token
+    api_id = getattr(settings, "HDEV_API_ID", "")
+    api_key = getattr(settings, "HDEV_API_KEY", "")
+    if not api_id or not api_key:
+        raise PaymentGatewayError("HDEV API credentials are not configured.")
+    return f"https://payment.hdevtech.cloud/api_pay/api/{api_id}/{api_key}"
 
 
 def initiate_payment(phone_number, amount, reference, description="", callback_url=None, metadata=None):
     """
-    Initiate a mobile money payment request (cashin) via Paypack.
+    Initiate a mobile money payment request via HDEV.
     
     Args:
         phone_number: Mobile number in 07xxxxxxxx format
         amount: Amount in RWF as Decimal or int
-        reference: Our internal receipt number (used as Idempotency-Key)
+        reference: Our internal receipt number (used as tx_ref)
         description: Description of payment (for logging)
-        callback_url: Webhook URL for Paypack to call
+        callback_url: Webhook URL for HDEV to call (the 'link' parameter)
         metadata: Dict with extra data (student_id, fee_type, etc.) for tracking
-
+    
     Returns a dict with the server-side transaction identifiers:
         {
             "client_transaction_id": str,
@@ -83,111 +52,99 @@ def initiate_payment(phone_number, amount, reference, description="", callback_u
             "phone": str,
         }
     """
-    client_id, client_secret = _get_credentials()
-
+    base_url = _get_base_url()
+    webhook_url = callback_url or getattr(settings, "HDEV_WEBHOOK_URL", "")
+    
+    payload = {
+        "ref": "pay",
+        "tel": phone_number,
+        "tx_ref": reference,
+        "amount": int(float(amount)),
+        "link": webhook_url,
+    }
+    
+    if metadata:
+        logger.info(f"Payment metadata: {metadata}")
+    
+    logger.info(f"HDEV Request - Phone: {phone_number}, Amount: {payload['amount']}, Ref: {reference}, Desc: {description}")
+    
     try:
-        token = get_access_token()
-        url = f"{_get_base_url()}/transactions/cashin"
-        
-        # Build request body with database data
-        payload = {
-            "number": phone_number,
-            "amount": int(float(amount)),
-        }
-        
-        # If metadata is provided, include it for tracking (as string for reference)
-        if metadata:
-            # Store metadata info in logging/audit trail
-            logger.info(f"Payment metadata: {metadata}")
-
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Idempotency-Key": reference or str(uuid.uuid4()),
-        }
-        
-        logger.info(f"PayPack Request - Phone: {phone_number}, Amount: {payload['amount']}, Ref: {reference}, Desc: {description}")
-        
         resp = requests.post(
-            url,
-            json=payload,
-            headers=headers,
-            timeout=15,
+            base_url,
+            data=payload,
+            headers={"Accept": "application/json"},
+            timeout=30,
         )
-
-        # Log response
-        logger.info(f"PayPack Response - Status: {resp.status_code}, Body: {resp.text}")
+        logger.info(f"HDEV Response - Status: {resp.status_code}, Body: {resp.text}")
         body = resp.json()
-        logger.info(f"PayPack Response JSON: {body}")
-
+        logger.info(f"HDEV Response JSON: {body}")
         resp.raise_for_status()
-        body = resp.json()
     except requests.RequestException as e:
-        logger.error(f"PayPack payment request failed: {str(e)}")
-        raise PaypackError(f"Paypack payment request failed: {e}")
+        logger.error(f"HDEV payment request failed: {str(e)}")
+        raise PaymentGatewayError(f"HDEV payment request failed: {e}")
     except ValueError as e:
-        logger.error(f"Invalid Paypack response: {str(e)}")
-        raise PaypackError(f"Invalid Paypack cashin response: {e}")
-
-    # Paypack returns the cashin result directly (not wrapped in "data"):
-    #   {"amount": 1000, "ref": "...", "status": "pending", ...}
+        logger.error(f"Invalid HDEV response: {str(e)}")
+        raise PaymentGatewayError(f"Invalid HDEV payment response: {e}")
+    
     data = body
     api_status = (body.get("status") or "").lower()
-
+    
     if api_status not in (None, "", "success", "pending", "accepted"):
         error_msg = body.get('message', body.get('detail', body.get('error', api_status)))
-        logger.warning(f"PayPack rejected payment: {error_msg}")
-        raise PaypackError(
-            f"Paypack rejected the payment: {error_msg}"
+        logger.warning(f"HDEV rejected payment: {error_msg}")
+        raise PaymentGatewayError(
+            f"HDEV rejected the payment: {error_msg}"
         )
-
-    client_transaction_id = data.get("ref", "")
-    returned_reference = data.get("reference", reference) or reference
-
+    
+    client_transaction_id = data.get("tx_ref", reference)
+    
     logger.info(f"Payment initiated successfully - Ref: {client_transaction_id}, Status: {api_status}")
-
+    
     return {
         "client_transaction_id": client_transaction_id,
-        "reference": returned_reference,
+        "reference": reference,
         "status": api_status or "pending",
         "amount": data.get("amount", int(float(amount))),
-        "phone": data.get("phone", phone_number),
+        "phone": data.get("tel", phone_number),
     }
 
 
 def get_transaction_status(ref):
     """
-    Look up the status of a transaction by its Paypack reference.
-
-    Returns the inner data dict which includes at least a "status" key
+    Look up the status of a transaction by its HDEV reference.
+    
+    Returns the response dict which includes at least a "status" key
     (pending | successful | failed | cancelled).
     """
+    base_url = _get_base_url()
+    payload = {
+        "ref": "read",
+        "tx_ref": ref,
+    }
+    
     try:
-        token = get_access_token()
-        url = f"{_get_base_url()}/transactions/find/{ref}"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-        }
-        resp = requests.get(url, headers=headers, timeout=10)
+        resp = requests.post(
+            base_url,
+            data=payload,
+            headers={"Accept": "application/json"},
+            timeout=10,
+        )
         resp.raise_for_status()
         body = resp.json()
     except requests.RequestException as e:
-        raise PaypackError(f"Failed to verify transaction: {e}")
+        raise PaymentGatewayError(f"Failed to verify transaction: {e}")
     except ValueError as e:
-        raise PaypackError(f"Invalid Paypack transaction response: {e}")
-
+        raise PaymentGatewayError(f"Invalid HDEV transaction response: {e}")
+    
     return body
 
 
 def parse_webhook_payload(raw_body):
     """
-    Normalise a Paypack webhook payload (or a flat status dict) into a
-    consistent structure:
+    Normalise an HDEV webhook payload into a consistent structure:
         {
             "event": str,
-            "ref": str,                  # Paypack internal ref
+            "ref": str,                  # HDEV internal ref
             "client_transaction_id": str,
             "external_reference": str,   # the reference WE sent (receipt number)
             "status": str,               # pending|successful|failed|cancelled
@@ -197,29 +154,22 @@ def parse_webhook_payload(raw_body):
     """
     if isinstance(raw_body, (bytes, bytearray, str)):
         import json
-
         try:
             data = json.loads(raw_body)
         except (ValueError, TypeError):
             return {}
     else:
         data = raw_body or {}
-
-    # Paypack wraps webhooks in {"event": ..., "data": {...}}
-    if "data" in data and isinstance(data["data"], dict):
-        inner = data["data"]
-        event = data.get("event", "")
-    else:
-        inner = data
-        event = ""
-
-    status = (inner.get("status") or "").lower()
+    
+    # HDEV webhook format is not fully documented, so handle common formats
+    status = (data.get("status") or "").lower()
+    
     return {
-        "event": event,
-        "ref": inner.get("ref") or inner.get("reference") or inner.get("client_transaction_id") or "",
-        "client_transaction_id": inner.get("client_transaction_id") or inner.get("ref") or inner.get("id") or "",
-        "external_reference": inner.get("external_reference") or inner.get("reference") or "",
+        "event": data.get("event", ""),
+        "ref": data.get("tx_ref") or data.get("ref") or data.get("id") or "",
+        "client_transaction_id": data.get("tx_ref") or data.get("ref") or data.get("id") or "",
+        "external_reference": data.get("external_reference") or data.get("reference") or "",
         "status": status,
-        "amount": inner.get("amount", 0),
-        "phone": inner.get("phone") or inner.get("msisdn") or "",
+        "amount": data.get("amount", 0),
+        "phone": data.get("tel") or data.get("phone") or data.get("msisdn") or "",
     }
