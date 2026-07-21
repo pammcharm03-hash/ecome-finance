@@ -18,6 +18,7 @@ from academics.models import AcademicYear
 from payments.models import Payment, AuditLog
 from payments.paypack import (
     initiate_payment,
+    get_transaction_status,
     parse_webhook_payload,
 )
 from payments.paypack import PaymentGatewayError as PaypackError
@@ -297,6 +298,34 @@ def payment_verify(request, pk):
             messages.error(request, f"Could not verify payment: {e}")
 
     return redirect("payments:payment_status", payment.pk)
+
+
+@login_required
+def payment_cancel(request, pk):
+    """Cancel a pending payment."""
+    payment = get_object_or_404(Payment, pk=pk)
+    if not request.user.is_admin and request.user.branch_id != payment.branch_id:
+        messages.error(request, "Access denied.")
+        return redirect("payments:payment_search")
+
+    if payment.status != Payment.Status.PENDING:
+        messages.warning(request, "Only pending payments can be cancelled.")
+        return redirect("payments:payment_status", payment.pk)
+
+    if request.method == "POST":
+        payment.status = Payment.Status.CANCELLED
+        payment.failure_reason = "Cancelled by user"
+        payment.save()
+
+        AuditLog.objects.create(
+            user=request.user, action="Payment Cancelled",
+            detail=f"Payment {payment.receipt_number} cancelled by {request.user.username}",
+            branch=payment.branch,
+        )
+        messages.success(request, "Payment cancelled successfully.")
+        return redirect("payments:payment_history")
+
+    return render(request, "payments/payment_cancel.html", {"payment": payment})
 
 
 @login_required
